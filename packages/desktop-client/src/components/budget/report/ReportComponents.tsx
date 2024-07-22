@@ -12,6 +12,7 @@ import { Button } from '../../common/Button2';
 import { Popover } from '../../common/Popover';
 import { Text } from '../../common/Text';
 import { View } from '../../common/View';
+import { NotesButton } from '../../NotesButton';
 import { CellValue } from '../../spreadsheet/CellValue';
 import { useFormat } from '../../spreadsheet/useFormat';
 import { Field, SheetCell } from '../../table';
@@ -170,7 +171,6 @@ export const CategoryMonth = memo(function CategoryMonth({
   onShowActivity,
 }: CategoryMonthProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hover, setHover] = useState(false);
   const triggerRef = useRef(null);
 
   const [balanceMenuOpen, setBalanceMenuOpen] = useState(false);
@@ -204,22 +204,21 @@ export const CategoryMonth = memo(function CategoryMonth({
           flex: 1,
           flexDirection: 'row',
         }}
-        onMouseOverCapture={() => setHover(true)}
-        onMouseLeave={() => {
-          setHover(false);
-        }}
       >
-        {!editing && (hover || menuOpen) && (
+        {!editing && (
           <View
             style={{
+              flexDirection: 'row',
               flexShrink: 0,
               paddingLeft: 3,
+              alignItems: 'center',
               justifyContent: 'center',
               borderTopWidth: 1,
               borderBottomWidth: 1,
               borderColor: theme.tableBorder,
             }}
           >
+            <NotesButton id={`budget-${month}-${category.id}`} />
             <Button
               ref={triggerRef}
               variant="bare"
