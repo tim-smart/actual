@@ -52,6 +52,7 @@ export function ReportCard({
   if (to) {
     return (
       <Link
+        variant="internal"
         to={to}
         report={report}
         style={{ textDecoration: 'none', ...containerProps }}
