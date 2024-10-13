@@ -21,6 +21,7 @@ import { useModalState } from '../../hooks/useModalState';
 import { AnimatedLoading } from '../../icons/AnimatedLoading';
 import { SvgLogo } from '../../icons/logo';
 import { SvgDelete } from '../../icons/v0';
+import { useResponsive } from '../../ResponsiveProvider';
 import { type CSSProperties, styles, theme } from '../../style';
 import { tokens } from '../../tokens';
 
@@ -51,6 +52,7 @@ export const Modal = ({
   containerProps,
   ...props
 }: ModalProps) => {
+  const { isNarrowWidth } = useResponsive();
   const { enableScope, disableScope } = useHotkeysContext();
 
   // This deactivates any key handlers in the "app" scope
@@ -81,8 +83,15 @@ export const Modal = ({
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: 14,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
         willChange: 'transform',
+        // on mobile, we disable the blurred background for performance reasons
+        ...(isNarrowWidth
+          ? {
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            }
+          : {
+              backdropFilter: 'blur(1px) brightness(0.9)',
+            }),
         ...style,
       }}
       {...props}
