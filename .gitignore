@@ -101,3 +101,6 @@ storybook-static
 .actualrc.yaml
 .actualrc.yml
 actual.config.js
+
+.direnv/
+.lalph/
