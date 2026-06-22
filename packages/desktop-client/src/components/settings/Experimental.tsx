@@ -214,6 +214,9 @@ export function ExperimentalFeatures() {
             >
               <Trans>Redesigned sidebar</Trans>
             </FeatureToggle>
+            <FeatureToggle flag="futureBufferMode">
+              <Trans>Future buffer mode</Trans>
+            </FeatureToggle>
             <FeatureToggle
               flag="sankeyReport"
               feedbackLink="https://github.com/actualbudget/actual/issues/1919"

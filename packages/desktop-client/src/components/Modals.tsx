@@ -48,6 +48,7 @@ import { EnvelopeBudgetSummaryModal } from './modals/EnvelopeBudgetSummaryModal'
 import { EnvelopeIncomeBalanceMenuModal } from './modals/EnvelopeIncomeBalanceMenuModal';
 import { EnvelopeToBudgetMenuModal } from './modals/EnvelopeToBudgetMenuModal';
 import { FixEncryptionKeyModal } from './modals/FixEncryptionKeyModal';
+import { FutureBufferModeModal } from './modals/FutureBufferModeModal';
 import { GoalTemplateModal } from './modals/GoalTemplateModal';
 import { GoCardlessExternalMsgModal } from './modals/GoCardlessExternalMsgModal';
 import { GoCardlessInitialiseModal } from './modals/GoCardlessInitialiseModal';
@@ -347,6 +348,9 @@ export function Modals() {
               <EnvelopeToBudgetMenuModal {...modal.options} />
             </SheetNameProvider>
           );
+
+        case 'future-buffer-mode':
+          return <FutureBufferModeModal key={key} />;
 
         case 'hold-buffer':
           return (
