@@ -303,9 +303,10 @@ export function triggerBudgetChanges(oldValues, newValues) {
 }
 
 export async function doTransfer(categoryIds, transferId) {
-  const { createdMonths: months } = sheet.get().meta();
+  const { createdMonths = new Set<string>() } = sheet.get().meta();
+  const months = [...createdMonths];
 
-  [...months].forEach(month => {
+  for (const month of months) {
     const totalValue = categoryIds
       .map(id => {
         return budgetActions.getBudget({ month, category: id });
@@ -317,12 +318,12 @@ export async function doTransfer(categoryIds, transferId) {
       category: transferId,
     });
 
-    void budgetActions.setBudget({
+    await budgetActions.setBudget({
       month,
       category: transferId,
       amount: totalValue + transferValue,
     });
-  });
+  }
 }
 
 export async function createBudget(months) {

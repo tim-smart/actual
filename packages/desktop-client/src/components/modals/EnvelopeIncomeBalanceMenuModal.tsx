@@ -6,6 +6,7 @@ import { MobileSheetBalanceHeader } from '#components/mobile/MobileSheetBalanceH
 import { MobileSheetRow } from '#components/mobile/MobileSheetRow';
 import { MobileSheetSection } from '#components/mobile/MobileSheetSection';
 import { useCategory } from '#hooks/useCategory';
+import { useFutureBufferMode } from '#hooks/useFutureBufferMode';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 import { envelopeBudget } from '#spreadsheet/bindings';
 
@@ -21,9 +22,14 @@ export function EnvelopeIncomeBalanceMenuModal({
 }: EnvelopeIncomeBalanceMenuModalProps) {
   const { t } = useTranslation();
   const { data: category } = useCategory(categoryId);
+  const { isAutomaticFutureBufferMode } = useFutureBufferMode();
+
   const carryover = useEnvelopeSheetValue(
     envelopeBudget.catCarryover(categoryId),
   );
+
+  // Hide the manual income auto-hold toggle while future buffer mode is active.
+  const hideAutoHold = isAutomaticFutureBufferMode;
 
   if (!category) {
     return null;
@@ -40,10 +46,12 @@ export function EnvelopeIncomeBalanceMenuModal({
         longGoal={envelopeBudget.catLongGoal(categoryId)}
       />
       <MobileSheetSection>
-        <MobileSheetRow
-          label={carryover ? t('Disable auto hold') : t('Enable auto hold')}
-          onPress={() => onCarryover(!carryover)}
-        />
+        {!hideAutoHold && (
+          <MobileSheetRow
+            label={carryover ? t('Disable auto hold') : t('Enable auto hold')}
+            onPress={() => onCarryover(!carryover)}
+          />
+        )}
         <MobileSheetRow
           label={t('View transactions')}
           onPress={() => onShowActivity()}

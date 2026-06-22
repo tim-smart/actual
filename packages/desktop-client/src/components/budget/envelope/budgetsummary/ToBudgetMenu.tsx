@@ -6,6 +6,9 @@ import { Menu } from '@actual-app/components/menu';
 import type { MenuItemObject } from '@actual-app/components/menu';
 
 import { useEnvelopeSheetValue } from '#components/budget/envelope/EnvelopeBudgetComponents';
+import { useFutureBufferMode } from '#hooks/useFutureBufferMode';
+import { pushModal } from '#modals/modalsSlice';
+import { useDispatch } from '#redux';
 import { envelopeBudget } from '#spreadsheet/bindings';
 
 export type ToBudgetMenuActions = {
@@ -26,6 +29,19 @@ export function useToBudgetMenu({
   month,
 }: ToBudgetMenuActions) {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+
+  const {
+    isFutureBufferModeAvailable,
+    isAutomaticFutureBufferMode,
+    isCurrentOrFutureMonth,
+  } = useFutureBufferMode();
+
+  // While future buffer mode is active, manual hold/reset controls are
+  // hidden for the current and future months because future buffer mode
+  // controls those buffers. They remain available for past months.
+  const hideManualControls =
+    isAutomaticFutureBufferMode && isCurrentOrFutureMonth(month);
 
   const toBudget = useEnvelopeSheetValue(envelopeBudget.toBudget) ?? 0;
   const forNextMonth = useEnvelopeSheetValue(envelopeBudget.forNextMonth) ?? 0;
@@ -42,7 +58,7 @@ export function useToBudgetMenu({
           },
         ]
       : []),
-    ...(autoBuffered === 0 && toBudget > 0
+    ...(!hideManualControls && autoBuffered === 0 && toBudget > 0
       ? [
           {
             name: 'buffer',
@@ -58,7 +74,7 @@ export function useToBudgetMenu({
           },
         ]
       : []),
-    ...(forNextMonth > 0 && manualBuffered === 0
+    ...(!hideManualControls && forNextMonth > 0 && manualBuffered === 0
       ? [
           {
             name: 'disable-auto-buffer',
@@ -66,11 +82,19 @@ export function useToBudgetMenu({
           },
         ]
       : []),
-    ...(forNextMonth > 0 && manualBuffered !== 0
+    ...(!hideManualControls && forNextMonth > 0 && manualBuffered !== 0
       ? [
           {
             name: 'reset-buffer',
             text: t("Reset next month's buffer"),
+          },
+        ]
+      : []),
+    ...(isFutureBufferModeAvailable
+      ? [
+          {
+            name: 'future-buffer-mode',
+            text: t('Change future buffer mode'),
           },
         ]
       : []),
@@ -104,6 +128,15 @@ export function useToBudgetMenu({
         break;
       case 'disable-auto-buffer':
         onBudgetAction?.(month, 'reset-income-carryover', {});
+        break;
+      case 'future-buffer-mode':
+        dispatch(
+          pushModal({
+            modal: {
+              name: 'future-buffer-mode',
+            },
+          }),
+        );
         break;
       default:
         throw new Error(`Unrecognized menu option: ${name}`);
