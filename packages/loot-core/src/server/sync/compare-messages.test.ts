@@ -5,7 +5,7 @@ import * as budget from '#server/budget/base';
 import * as db from '#server/db';
 import * as sheet from '#server/sheet';
 
-import { applyMessages, setSyncingMode } from './index';
+import { applyMessagesWithHooks as applyMessages, setSyncingMode } from './index';
 import type { Message } from './index';
 
 beforeEach(() => {
