@@ -31,6 +31,7 @@ import { getIn, setIn } from '#shared/util';
 import type { MetadataPrefs } from '#types/prefs';
 
 import * as encoder from './encoder';
+import { runBudgetChangeHooks } from './hooks';
 import { PENDING_MESSAGES_TABLE_SQL } from './messages-pending';
 import { rebuildMerkleHash } from './repair';
 import {
@@ -652,38 +653,6 @@ export async function applyMessagesWithHooks(
   }
 
   return result?.messages ?? [];
-}
-
-export type BudgetChangeHook = (
-  months: readonly string[],
-) => Promise<void> | void;
-
-function getBudgetChangeHooks(): Set<BudgetChangeHook> {
-  const store = getBudgetChangeHooks as typeof getBudgetChangeHooks & {
-    hooks?: Set<BudgetChangeHook>;
-  };
-  store.hooks ||= new Set();
-  return store.hooks;
-}
-
-export function registerBudgetChangeHook(hook: BudgetChangeHook): () => void {
-  getBudgetChangeHooks().add(hook);
-  return () => {
-    getBudgetChangeHooks().delete(hook);
-  };
-}
-
-export async function runBudgetChangeHooks(
-  months: Iterable<string>,
-): Promise<void> {
-  const touchedMonths = [...months];
-  if (touchedMonths.length === 0) {
-    return;
-  }
-
-  for (const hook of getBudgetChangeHooks()) {
-    await hook(touchedMonths);
-  }
 }
 
 export function receiveMessages(messages: Message[]): Promise<Message[]> {

@@ -2,6 +2,7 @@ import { aqlQuery } from '#server/aql';
 import * as db from '#server/db';
 import * as sheet from '#server/sheet';
 import { resolveName } from '#server/spreadsheet/util';
+import { runBudgetChangeHooks } from '#server/sync/hooks';
 // @ts-strict-ignore
 import * as monthUtils from '#shared/months';
 import { q } from '#shared/query';
@@ -130,7 +131,14 @@ export async function reseedSumAmounts(months: string[]): Promise<string[]> {
   return seededCells;
 }
 
-export function createCategory(cat, sheetName, prevSheetName, start, end) {
+export function createCategory(
+  cat,
+  sheetName,
+  prevSheetName,
+  start,
+  end,
+  options = {},
+) {
   sheet.get().createDynamic(sheetName, 'sum-amount-' + cat.id, {
     initialValue: 0,
     run: () => {
@@ -150,7 +158,7 @@ export function createCategory(cat, sheetName, prevSheetName, start, end) {
   });
 
   if (getBudgetType() === 'envelope') {
-    envelopeBudget.createCategory(cat, sheetName, prevSheetName);
+    envelopeBudget.createCategory(cat, sheetName, prevSheetName, options);
   } else {
     void trackingBudget.createCategory(cat, sheetName, prevSheetName);
   }
@@ -539,6 +547,8 @@ export async function createBudget(months) {
     return sumAmounts;
   };
   const seededCells: string[] = [];
+  const copyPreviousCarryover =
+    budgetType === 'envelope' && budgetActions.isFutureBufferModeActive();
 
   monthsToCreate.forEach(month => {
     const prevMonth = monthUtils.prevMonth(month);
@@ -559,7 +569,13 @@ export async function createBudget(months) {
           .load(name, getSumAmounts().get(`${dbMonth}-${cat.id}`) || 0);
         seededCells.push(name);
       }
-      createCategory(cat, sheetName, prevSheetName, start, end);
+      createCategory(cat, sheetName, prevSheetName, start, end, {
+        initialCarryover:
+          copyPreviousCarryover &&
+          sheet
+            .get()
+            .getCellValueLoose(prevSheetName, `carryover-${cat.id}`) === true,
+      });
     });
     groups.forEach(group => {
       if (budgetType === 'envelope') {
@@ -624,7 +640,6 @@ export async function createAllBudgets() {
     await createBudget(range);
 
     if (newMonths.some(month => month >= currentMonth)) {
-      const { runBudgetChangeHooks } = await import('#server/sync');
       await runBudgetChangeHooks(newMonths);
     }
   }
