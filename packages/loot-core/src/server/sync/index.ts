@@ -646,6 +646,7 @@ export async function applyMessagesWithHooks(
   deferUnknownSchema = false,
 ): Promise<Message[]> {
   const result = await applyMessages(inputMessages, deferUnknownSchema);
+
   if (result?.budgetChangeTouchedMonths) {
     await runBudgetChangeHooks(result.budgetChangeTouchedMonths).catch(
       errorHandler,
