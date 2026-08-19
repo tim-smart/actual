@@ -24,10 +24,13 @@ export function IncomeMenu({
   onClose,
 }: IncomeMenuProps) {
   const { t } = useTranslation();
-  const { isAutomaticFutureBufferMode } = useFutureBufferMode();
+  const { isAutomaticFutureBufferMode, isCurrentOrFutureMonth } =
+    useFutureBufferMode();
   const carryover = useEnvelopeSheetValue(
     envelopeBudget.catCarryover(categoryId),
   );
+  const hideCarryover =
+    isAutomaticFutureBufferMode && isCurrentOrFutureMonth(month);
 
   return (
     <span>
@@ -50,9 +53,9 @@ export function IncomeMenu({
           }
         }}
         items={[
-          // The manual income auto-hold toggle is hidden while future
-          // buffer mode is active.
-          ...(isAutomaticFutureBufferMode
+          // Automatic mode owns income carryover for the current and future
+          // months, while past-month controls remain available.
+          ...(hideCarryover
             ? []
             : [
                 {

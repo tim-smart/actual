@@ -219,6 +219,11 @@ function setCarryover(
     }
     return db.update(table, { id: existing.id, carryover });
   }
+  // A missing row already means carryover is disabled. Avoid creating empty
+  // budget rows and emitting sync messages that carry no new information.
+  if (!flag) {
+    return Promise.resolve();
+  }
   return db.insert(table, {
     id: `${month}-${category}`,
     month,
@@ -720,8 +725,11 @@ export async function coverOverspending({
 
   await batchMessages(async () => {
     if (isForNextMonthSource) {
-      const buffered = await getSheetValue(sheetName, source);
-      await setBuffer(month, buffered - coverableAmount);
+      // Disable income auto-hold before writing the remaining selected buffer.
+      // Otherwise a full cover writes manual buffer 0 and buffered-selected
+      // immediately falls back to the unchanged automatic buffer.
+      await resetIncomeCarryover({ month });
+      await setBuffer(month, leftoverFrom - coverableAmount);
     } else if (from !== 'to-budget') {
       const fromBudgeted = await getSheetValue(sheetName, 'budget-' + from);
       await setBudget({

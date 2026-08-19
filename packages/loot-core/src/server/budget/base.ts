@@ -365,11 +365,11 @@ function addFutureBufferTouchedMonths({
   newValue: unknown;
   createdMonths: Set<string>;
 }) {
-  const changedFields = getChangedFields(oldValue, newValue);
-
   if (table === 'zero_budget_months') {
     return;
   }
+
+  const changedFields = getChangedFields(oldValue, newValue);
 
   if (table === 'zero_budgets') {
     if (hasChangedField(changedFields, FUTURE_BUFFER_BUDGET_FIELDS)) {

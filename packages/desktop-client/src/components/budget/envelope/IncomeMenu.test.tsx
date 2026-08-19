@@ -77,13 +77,13 @@ describe('IncomeMenu auto hold visibility', () => {
     expect(screen.getByText('View transactions')).toBeInTheDocument();
   });
 
-  it('hides the income auto-hold toggle for past months while active', () => {
+  it('shows the income auto-hold toggle for past months while active', () => {
     mocks.featureFlag = true;
     mocks.futureBufferModePref = 'automatic';
 
     renderMenu(pastMonth);
 
-    expect(screen.queryByText('Enable auto hold')).not.toBeInTheDocument();
+    expect(screen.getByText('Enable auto hold')).toBeInTheDocument();
     expect(screen.queryByText('Disable auto hold')).not.toBeInTheDocument();
     expect(screen.getByText('View transactions')).toBeInTheDocument();
   });

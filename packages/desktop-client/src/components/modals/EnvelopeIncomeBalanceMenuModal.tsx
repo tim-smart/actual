@@ -10,26 +10,27 @@ import { useFutureBufferMode } from '#hooks/useFutureBufferMode';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 import { envelopeBudget } from '#spreadsheet/bindings';
 
-type EnvelopeIncomeBalanceMenuModalProps = Omit<
-  Extract<ModalType, { name: 'envelope-income-balance-menu' }>['options'],
-  'month'
->;
+type EnvelopeIncomeBalanceMenuModalProps = Extract<
+  ModalType,
+  { name: 'envelope-income-balance-menu' }
+>['options'];
 
 export function EnvelopeIncomeBalanceMenuModal({
   categoryId,
+  month,
   onCarryover,
   onShowActivity,
 }: EnvelopeIncomeBalanceMenuModalProps) {
   const { t } = useTranslation();
   const { data: category } = useCategory(categoryId);
-  const { isAutomaticFutureBufferMode } = useFutureBufferMode();
+  const { isAutomaticFutureBufferMode, isCurrentOrFutureMonth } =
+    useFutureBufferMode();
 
   const carryover = useEnvelopeSheetValue(
     envelopeBudget.catCarryover(categoryId),
   );
-
-  // Hide the manual income auto-hold toggle while future buffer mode is active.
-  const hideAutoHold = isAutomaticFutureBufferMode;
+  const hideCarryover =
+    isAutomaticFutureBufferMode && isCurrentOrFutureMonth(month);
 
   if (!category) {
     return null;
@@ -46,7 +47,9 @@ export function EnvelopeIncomeBalanceMenuModal({
         longGoal={envelopeBudget.catLongGoal(categoryId)}
       />
       <MobileSheetSection>
-        {!hideAutoHold && (
+        {/* Automatic mode owns income carryover for the current and future
+            months, while past-month controls remain available. */}
+        {!hideCarryover && (
           <MobileSheetRow
             label={carryover ? t('Disable auto hold') : t('Enable auto hold')}
             onPress={() => onCarryover(!carryover)}

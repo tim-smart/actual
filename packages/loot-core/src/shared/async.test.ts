@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { once, sequential } from './async';
+import { coalesced, once, sequential } from './async';
 
 function timeout(n) {
   return new Promise(resolve => setTimeout(resolve, n));
@@ -132,5 +132,71 @@ describe('async', () => {
     // comparison, like ===)
     expect(results[0]).toBe(results[1]);
     expect(results[0]).toBe(results[2]);
+  });
+
+  test('coalesced fn should return overlapping calls immediately', async () => {
+    let releaseFirstCall: () => void = () => {
+      throw new Error('First call did not start');
+    };
+    const firstCall = new Promise<void>(resolve => {
+      releaseFirstCall = () => resolve();
+    });
+    const fn = coalesced(async () => {
+      await firstCall;
+    });
+
+    const running = fn();
+    await expect(fn()).resolves.toBeUndefined();
+
+    releaseFirstCall();
+    await running;
+  });
+
+  test('coalesced fn should combine overlaps into one trailing rerun using the first caller arguments', async () => {
+    let releaseFirstCall: () => void = () => {
+      throw new Error('First call did not start');
+    };
+    const firstCall = new Promise<void>(resolve => {
+      releaseFirstCall = () => resolve();
+    });
+    const calls = [];
+    const fn = coalesced(async value => {
+      calls.push(value);
+      if (calls.length === 1) {
+        await firstCall;
+      }
+    });
+
+    const running = fn(1);
+    await Promise.all([fn(2), fn(3)]);
+    releaseFirstCall();
+    await running;
+
+    expect(calls).toEqual([1, 1]);
+  });
+
+  test('coalesced fn should preserve a trailing rerun when the active run throws', async () => {
+    let releaseFirstCall: () => void = () => {
+      throw new Error('First call did not start');
+    };
+    const firstCall = new Promise<void>(resolve => {
+      releaseFirstCall = () => resolve();
+    });
+    const error = new Error('first run failed');
+    let calls = 0;
+    const fn = coalesced(async () => {
+      calls++;
+      if (calls === 1) {
+        await firstCall;
+        throw error;
+      }
+    });
+
+    const running = fn();
+    await fn();
+    releaseFirstCall();
+
+    await expect(running).rejects.toBe(error);
+    expect(calls).toBe(2);
   });
 });

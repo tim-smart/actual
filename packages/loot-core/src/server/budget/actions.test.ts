@@ -177,6 +177,31 @@ describe('future buffer mode', () => {
     expect(await getBuffered('2024-05')).toBe(0);
   });
 
+  it('does not create empty income carryover rows while recalculating', async () => {
+    await setupFutureBufferModeDatabase(['2024-03', '2024-04']);
+    enableFutureBufferModePrefs();
+
+    await recalculateFutureBuffer();
+
+    const incomeCarryoverRows = await db.all<db.DbZeroBudget>(
+      'SELECT * FROM zero_budgets WHERE category = ?',
+      ['income-cat'],
+    );
+    expect(incomeCarryoverRows).toEqual([]);
+  });
+
+  it('emits no redundant writes when recalculation state is unchanged', async () => {
+    await setupFutureBufferModeDatabase(['2024-03', '2024-04']);
+    await setSingleFutureMonthAmounts();
+    enableFutureBufferModePrefs();
+    await recalculateFutureBuffer();
+    const messageCount = await getMessageCount();
+
+    await recalculateFutureBuffer();
+
+    expect(await getMessageCount()).toBe(messageCount);
+  });
+
   it('recalculates after a future direct budget edit through the handler', async () => {
     await setupFutureBufferModeDatabase(['2024-03', '2024-04']);
     await setBuffer('2024-03', 123);
@@ -259,6 +284,43 @@ describe('future buffer mode', () => {
 
     expect(await getSheetValue('budget202403', 'leftover-cat1')).toBe(0);
     expect(await getBuffered('2024-03')).toBe(0);
+  });
+
+  it('fully covers overspending from an auto-held buffer without reducing to-budget', async () => {
+    await setupAutoHeldBufferForCover();
+
+    await runHandler(app.handlers['budget/cover-overspending'], {
+      month: '2024-03',
+      to: 'cat1',
+      from: 'for-next-month',
+      currencyCode: 'USD',
+    });
+
+    expect(await getSheetValue('budget202403', 'budget-cat1')).toBe(10000);
+    expect(await getSheetValue('budget202403', 'leftover-cat1')).toBe(0);
+    expect(await getSheetValue('budget202403', 'buffered')).toBe(0);
+    expect(await getSheetValue('budget202403', 'buffered-auto')).toBe(0);
+    expect(await getSheetValue('budget202403', 'buffered-selected')).toBe(0);
+    expect(await getSheetValue('budget202403', 'to-budget')).toBe(0);
+  });
+
+  it('partially covers overspending from an auto-held buffer', async () => {
+    await setupAutoHeldBufferForCover();
+
+    await runHandler(app.handlers['budget/cover-overspending'], {
+      month: '2024-03',
+      to: 'cat1',
+      from: 'for-next-month',
+      amount: 5000,
+      currencyCode: 'USD',
+    });
+
+    expect(await getSheetValue('budget202403', 'budget-cat1')).toBe(5000);
+    expect(await getSheetValue('budget202403', 'leftover-cat1')).toBe(-5000);
+    expect(await getSheetValue('budget202403', 'buffered')).toBe(5000);
+    expect(await getSheetValue('budget202403', 'buffered-auto')).toBe(0);
+    expect(await getSheetValue('budget202403', 'buffered-selected')).toBe(5000);
+    expect(await getSheetValue('budget202403', 'to-budget')).toBe(0);
   });
 
   it('recalculates after adding, deleting, and recategorizing current-month transactions through the handler', async () => {
@@ -943,6 +1005,43 @@ async function getCarryover(month: string, category: string) {
       )
     )?.carryover ?? 0) === 1
   );
+}
+
+async function getMessageCount() {
+  return (
+    await db.first<{ count: number }>(
+      'SELECT COUNT(*) AS count FROM messages_crdt',
+    )
+  )?.count;
+}
+
+async function setupAutoHeldBufferForCover() {
+  await setupFutureBufferModeDatabase(['2024-03']);
+  await db.insertTransaction({
+    date: '2024-03-01',
+    amount: 10000,
+    account: 'account1',
+    category: 'income-cat',
+  });
+  await db.insertTransaction({
+    date: '2024-03-01',
+    amount: -10000,
+    account: 'account1',
+    category: 'cat1',
+  });
+  await setCategoryCarryover({
+    startMonth: '2024-03',
+    category: 'income-cat',
+    flag: true,
+  });
+  setPreference('flags.futureBufferMode', 'true');
+  setPreference('futureBufferMode', 'manual');
+  await sheet.waitOnSpreadsheet();
+
+  expect(await getSheetValue('budget202403', 'buffered')).toBe(0);
+  expect(await getSheetValue('budget202403', 'buffered-auto')).toBe(10000);
+  expect(await getSheetValue('budget202403', 'buffered-selected')).toBe(10000);
+  expect(await getSheetValue('budget202403', 'to-budget')).toBe(0);
 }
 
 async function setupAverageDatabase() {

@@ -78,7 +78,9 @@ export function once<T extends AnyFunction>(
 /**
  * Ensures that the function is only called one at a time. Overlapping
  * calls return immediately and are coalesced into a single trailing
- * rerun, so a call made while the function is running is never dropped.
+ * rerun using the first caller's arguments. A pending rerun is still
+ * performed if an earlier run throws, after which the first error is
+ * rethrown to the initial caller.
  */
 export function coalesced<T extends AnyFunction>(
   fn: T,
@@ -91,11 +93,20 @@ export function coalesced<T extends AnyFunction>(
       return;
     }
     running = true;
+    let firstError: { reason: unknown } | null = null;
     try {
       do {
         pending = false;
-        await fn(...args);
+        try {
+          await fn(...args);
+        } catch (reason) {
+          firstError ??= { reason };
+        }
       } while (pending);
+
+      if (firstError) {
+        throw firstError.reason;
+      }
     } finally {
       running = false;
     }
