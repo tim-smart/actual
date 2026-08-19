@@ -62,7 +62,7 @@ function dbMonth(month: string): number {
   return parseInt(month.replace('-', ''));
 }
 
-function monthFromDbMonth(month: number): string {
+export function monthFromDbMonth(month: number): string {
   const monthString = String(month).padStart(6, '0');
   return `${monthString.slice(0, 4)}-${monthString.slice(4)}`;
 }
@@ -335,23 +335,20 @@ export const recalculateFutureBuffer = coalesced(
 // Recalculates the future buffer when a budget-affecting change touches
 // the current month or a future month. Called directly from the places
 // that produce such changes: sync message application, budget month
-// creation, and income carryover updates.
+// creation, and income carryover updates. Best effort: those callers must
+// not fail when the recalculation does, so errors are only logged.
 export async function maybeRecalculateFutureBuffer(
   months: Iterable<string>,
 ): Promise<void> {
-  let touchesManagedMonth = false;
-  for (const month of months) {
-    if (isCurrentOrFutureMonth(month)) {
-      touchesManagedMonth = true;
-      break;
-    }
-  }
-
-  if (!touchesManagedMonth || !isFutureBufferModeActive()) {
+  if (![...months].some(isCurrentOrFutureMonth)) {
     return;
   }
 
-  await recalculateFutureBuffer();
+  try {
+    await recalculateFutureBuffer();
+  } catch (error) {
+    logger.error('Failed to recalculate future buffer', error);
+  }
 }
 
 export async function setFutureBufferMode({
@@ -695,20 +692,14 @@ export async function coverOverspending({
   const sheetName = monthUtils.sheetForMonth(month);
   const toBudgeted = await getSheetValue(sheetName, 'budget-' + to);
 
-  let source: string;
-  switch (from) {
-    case 'to-budget':
-      source = 'to-budget';
-      break;
-    case 'for-next-month':
-      source = 'buffered-selected';
-      break;
-    default:
-      source = `leftover-${from}`;
-      break;
-  }
-  const isForNextMonthSource = source === 'buffered-selected';
-  const leftoverFrom = await getSheetValue(sheetName, source);
+  const leftoverFrom = await getSheetValue(
+    sheetName,
+    from === 'to-budget'
+      ? 'to-budget'
+      : from === 'for-next-month'
+        ? 'buffered-selected'
+        : 'leftover-' + from,
+  );
 
   // Cover provided amount (can be partial) or full overspending amount.
   const amountToCover = amount
@@ -724,7 +715,7 @@ export async function coverOverspending({
   const coverableAmount = Math.min(Math.abs(amountToCover), leftoverFrom);
 
   await batchMessages(async () => {
-    if (isForNextMonthSource) {
+    if (from === 'for-next-month') {
       // Disable income auto-hold before writing the remaining selected buffer.
       // Otherwise a full cover writes manual buffer 0 and buffered-selected
       // immediately falls back to the unchanged automatic buffer.
@@ -891,20 +882,18 @@ export async function setCategoryCarryover({
   flag: boolean;
 }): Promise<void> {
   const table = getBudgetTable();
-  const categoryFromDb = await db.first<Pick<db.DbViewCategory, 'is_income'>>(
-    'SELECT is_income FROM v_categories WHERE id = ?',
-    [category],
-  );
-  const isIncomeCategory = categoryFromDb?.is_income === 1;
   const isFutureBufferActiveForIncome =
-    isIncomeCategory && isFutureBufferModeActive();
+    isFutureBufferModeActive() &&
+    (
+      await db.first<Pick<db.DbViewCategory, 'is_income'>>(
+        'SELECT is_income FROM v_categories WHERE id = ?',
+        [category],
+      )
+    )?.is_income === 1;
   const allMonths = getAllMonths(startMonth);
   const months = isFutureBufferActiveForIncome
-    ? allMonths.filter(month => month < monthUtils.currentMonth())
+    ? allMonths.filter(month => !isCurrentOrFutureMonth(month))
     : allMonths;
-  const skippedMonths = isFutureBufferActiveForIncome
-    ? allMonths.filter(isCurrentOrFutureMonth)
-    : [];
 
   await batchMessages(async () => {
     for (const month of months) {
@@ -912,14 +901,8 @@ export async function setCategoryCarryover({
     }
   });
 
-  if (skippedMonths.length > 0) {
-    // Best effort: the carryover writes above already succeeded, so a
-    // recalculation failure must not surface this action as failed.
-    try {
-      await maybeRecalculateFutureBuffer(skippedMonths);
-    } catch (error) {
-      logger.error('Failed to recalculate future buffer', error);
-    }
+  if (isFutureBufferActiveForIncome) {
+    await maybeRecalculateFutureBuffer(allMonths);
   }
 }
 

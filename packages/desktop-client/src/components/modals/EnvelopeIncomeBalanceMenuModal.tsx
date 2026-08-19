@@ -23,14 +23,12 @@ export function EnvelopeIncomeBalanceMenuModal({
 }: EnvelopeIncomeBalanceMenuModalProps) {
   const { t } = useTranslation();
   const { data: category } = useCategory(categoryId);
-  const { isAutomaticFutureBufferMode, isCurrentOrFutureMonth } =
-    useFutureBufferMode();
+  const { isManagedMonth } = useFutureBufferMode();
 
   const carryover = useEnvelopeSheetValue(
     envelopeBudget.catCarryover(categoryId),
   );
-  const hideCarryover =
-    isAutomaticFutureBufferMode && isCurrentOrFutureMonth(month);
+  const hideCarryover = isManagedMonth(month);
 
   if (!category) {
     return null;
@@ -47,8 +45,6 @@ export function EnvelopeIncomeBalanceMenuModal({
         longGoal={envelopeBudget.catLongGoal(categoryId)}
       />
       <MobileSheetSection>
-        {/* Automatic mode owns income carryover for the current and future
-            months, while past-month controls remain available. */}
         {!hideCarryover && (
           <MobileSheetRow
             label={carryover ? t('Disable auto hold') : t('Enable auto hold')}

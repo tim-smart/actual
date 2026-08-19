@@ -107,7 +107,7 @@ describe('future buffer mode', () => {
     await setSingleFutureMonthAmounts();
     enableFutureBufferModePrefs();
 
-    await runHandler(app.handlers['budget/recalculate-future-buffer']);
+    await recalculateFutureBuffer();
 
     expect(await getBuffered('2024-03')).toBe(42000);
     expect(await getBuffered('2024-04')).toBe(0);

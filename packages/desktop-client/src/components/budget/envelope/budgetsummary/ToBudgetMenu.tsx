@@ -31,17 +31,11 @@ export function useToBudgetMenu({
   const { t } = useTranslation();
   const dispatch = useDispatch();
 
-  const {
-    isFutureBufferModeAvailable,
-    isAutomaticFutureBufferMode,
-    isCurrentOrFutureMonth,
-  } = useFutureBufferMode();
+  const { isFutureBufferModeAvailable, isManagedMonth } = useFutureBufferMode();
 
-  // While future buffer mode is active, manual hold/reset controls are
-  // hidden for the current and future months because future buffer mode
-  // controls those buffers. They remain available for past months.
-  const hideManualControls =
-    isAutomaticFutureBufferMode && isCurrentOrFutureMonth(month);
+  // Automatic mode owns the buffers for managed months, so the manual
+  // hold/reset controls are hidden there.
+  const hideManualControls = isManagedMonth(month);
 
   const toBudget = useEnvelopeSheetValue(envelopeBudget.toBudget) ?? 0;
   const forNextMonth = useEnvelopeSheetValue(envelopeBudget.forNextMonth) ?? 0;

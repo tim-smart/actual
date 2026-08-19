@@ -8,7 +8,6 @@ import { View } from '@actual-app/components/view';
 import type { IntegerAmount } from '@actual-app/core/shared/util';
 
 import {
-  addForNextMonthGroup,
   addToBeBudgetedGroup,
   removeCategoriesFromGroups,
 } from '#components/budget/util';
@@ -43,15 +42,13 @@ export function CoverModal({
   const [categoryGroups, categories] = useMemo(() => {
     const expenseGroups = originalCategoryGroups.filter(g => !g.is_income);
     const categoryGroups = showToBeBudgeted
-      ? addToBeBudgetedGroup(expenseGroups)
+      ? addToBeBudgetedGroup(expenseGroups, {
+          includeForNextMonth: showForNextMonth && isFutureBufferModeAvailable,
+        })
       : expenseGroups;
-    const categoryGroupsWithForNextMonth =
-      showForNextMonth && isFutureBufferModeAvailable
-        ? addForNextMonthGroup(categoryGroups)
-        : categoryGroups;
     const filteredCategoryGroups = categoryId
-      ? removeCategoriesFromGroups(categoryGroupsWithForNextMonth, categoryId)
-      : categoryGroupsWithForNextMonth;
+      ? removeCategoriesFromGroups(categoryGroups, categoryId)
+      : categoryGroups;
     const filteredCategoryies = filteredCategoryGroups.flatMap(
       g => g.categories || [],
     );

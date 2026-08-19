@@ -35,9 +35,8 @@ export function FutureBufferModeModal() {
     try {
       await setFutureBufferMode(selectedMode);
       close();
-    } catch (error) {
+    } finally {
       setIsSaving(false);
-      throw error;
     }
   };
 

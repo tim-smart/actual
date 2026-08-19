@@ -16,7 +16,6 @@ import type { CategoryEntity } from '@actual-app/core/types/models';
 
 import { CategoryAutocomplete } from '#components/autocomplete/CategoryAutocomplete';
 import {
-  addForNextMonthGroup,
   addToBeBudgetedGroup,
   removeCategoriesFromGroups,
 } from '#components/budget/util';
@@ -51,15 +50,13 @@ export function CoverMenu({
   const filteredCategoryGroups = useMemo(() => {
     const expenseGroups = originalCategoryGroups.filter(g => !g.is_income);
     const categoryGroups = showToBeBudgeted
-      ? addToBeBudgetedGroup(expenseGroups)
+      ? addToBeBudgetedGroup(expenseGroups, {
+          includeForNextMonth: showForNextMonth && isFutureBufferModeAvailable,
+        })
       : expenseGroups;
-    const categoryGroupsWithForNextMonth =
-      showForNextMonth && isFutureBufferModeAvailable
-        ? addForNextMonthGroup(categoryGroups)
-        : categoryGroups;
     return categoryId
-      ? removeCategoriesFromGroups(categoryGroupsWithForNextMonth, categoryId)
-      : categoryGroupsWithForNextMonth;
+      ? removeCategoriesFromGroups(categoryGroups, categoryId)
+      : categoryGroups;
   }, [
     categoryId,
     showToBeBudgeted,

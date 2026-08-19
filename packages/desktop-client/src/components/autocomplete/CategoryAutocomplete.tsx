@@ -29,7 +29,6 @@ import { FinancialText } from '#components/FinancialText';
 import { useCategories } from '#hooks/useCategories';
 import { useSheetValue } from '#hooks/useSheetValue';
 import { useSyncedPref } from '#hooks/useSyncedPref';
-import type { Binding } from '#spreadsheet';
 import { envelopeBudget, trackingBudget } from '#spreadsheet/bindings';
 
 import { Autocomplete } from './Autocomplete';
@@ -363,7 +362,14 @@ function CategoryItem({
     : {};
   const [budgetType = 'envelope'] = useSyncedPref('budgetType');
 
-  const balanceBinding = getCategoryBinding(budgetType, item.id);
+  const balanceBinding =
+    item.id === 'to-budget'
+      ? envelopeBudget.toBudget
+      : item.id === 'for-next-month'
+        ? envelopeBudget.forNextMonth
+        : budgetType === 'envelope'
+          ? envelopeBudget.catBalance(item.id)
+          : trackingBudget.catBalance(item.id);
   const balance = useSheetValue<
     'envelope-budget',
     'to-budget' | 'buffered-selected' | 'leftover'
@@ -421,23 +427,6 @@ function CategoryItem({
       </View>
     </button>
   );
-}
-
-function getCategoryBinding(
-  budgetType: string,
-  categoryId: string,
-):
-  | Binding<'envelope-budget', 'to-budget' | 'buffered-selected' | 'leftover'>
-  | Binding<'tracking-budget', 'leftover'> {
-  const budget = budgetType === 'envelope' ? envelopeBudget : trackingBudget;
-  switch (categoryId) {
-    case 'to-budget':
-      return envelopeBudget.toBudget;
-    case 'for-next-month':
-      return envelopeBudget.forNextMonth;
-    default:
-      return budget.catBalance(categoryId);
-  }
 }
 
 function defaultRenderCategoryItem(

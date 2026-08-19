@@ -651,9 +651,7 @@ export async function applyMessages(
   // writes budget data through sendMessages, which would deadlock if it
   // were awaited while applyMessagesInternal is still running.
   if (result?.budgetChangeTouchedMonths) {
-    await maybeRecalculateFutureBuffer(result.budgetChangeTouchedMonths).catch(
-      errorHandler,
-    );
+    await maybeRecalculateFutureBuffer(result.budgetChangeTouchedMonths);
   }
 
   return result?.messages ?? [];

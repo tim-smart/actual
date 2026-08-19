@@ -21,7 +21,10 @@ import type { useSpreadsheet } from '#hooks/useSpreadsheet';
 
 import { getValidMonthBounds } from './MonthsContext';
 
-export function addToBeBudgetedGroup(groups: CategoryGroupEntity[]) {
+export function addToBeBudgetedGroup(
+  groups: CategoryGroupEntity[],
+  { includeForNextMonth = false } = {},
+) {
   return [
     {
       id: 'to-budget',
@@ -32,28 +35,19 @@ export function addToBeBudgetedGroup(groups: CategoryGroupEntity[]) {
           name: t('To Budget'),
           group: 'to-budget',
         },
+        ...(includeForNextMonth
+          ? [
+              {
+                id: 'for-next-month',
+                name: t('For next month'),
+                group: 'to-budget',
+              },
+            ]
+          : []),
       ],
     } as CategoryGroupEntity,
     ...groups,
   ];
-}
-
-export function addForNextMonthGroup(groups: CategoryGroupEntity[]) {
-  return groups.map(group =>
-    group.id === 'to-budget'
-      ? ({
-          ...group,
-          categories: [
-            ...(group.categories ?? []),
-            {
-              id: 'for-next-month',
-              name: t('For next month'),
-              group: 'to-budget',
-            },
-          ],
-        } as CategoryGroupEntity)
-      : group,
-  );
 }
 
 export function getCoverSourceName(

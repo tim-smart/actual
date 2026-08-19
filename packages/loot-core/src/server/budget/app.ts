@@ -45,7 +45,6 @@ export type BudgetHandlers = {
   'budget/copy-until-year-end': typeof actions.copyUntilYearEnd;
   'budget/set-carryover': typeof actions.setCategoryCarryover;
   'budget/reset-income-carryover': typeof actions.resetIncomeCarryover;
-  'budget/recalculate-future-buffer': typeof actions.recalculateFutureBuffer;
   'budget/set-future-buffer-mode': typeof actions.setFutureBufferMode;
   'get-categories': typeof getCategories;
   'get-budget-bounds': typeof getBudgetBounds;
@@ -143,10 +142,6 @@ app.method(
 app.method(
   'budget/reset-income-carryover',
   mutator(undoable(actions.resetIncomeCarryover)),
-);
-app.method(
-  'budget/recalculate-future-buffer',
-  mutator(undoable(actions.recalculateFutureBuffer)),
 );
 app.method(
   'budget/set-future-buffer-mode',

@@ -12,10 +12,10 @@ type UseFutureBufferModeResult = {
   futureBufferMode: FutureBufferMode;
   // Whether the future buffer mode setting should be shown (feature flag on + envelope).
   isFutureBufferModeAvailable: boolean;
-  // Whether automatic future buffer mode is currently active.
-  isAutomaticFutureBufferMode: boolean;
-  // Whether the given month is the current month or a future month.
-  isCurrentOrFutureMonth: (month: string) => boolean;
+  // Whether automatic mode owns the buffer and income carryover for the
+  // given month. It manages the current and future months, while manual
+  // controls remain available for past months.
+  isManagedMonth: (month: string) => boolean;
   // Persist the future buffer mode preference via the atomic core action.
   setFutureBufferMode: (mode: FutureBufferMode) => Promise<void>;
 };
@@ -30,8 +30,6 @@ export function useFutureBufferMode(): UseFutureBufferModeResult {
     futureBufferModePref === 'automatic' ? 'automatic' : 'manual';
   const isFutureBufferModeAvailable =
     featureFlagEnabled && budgetType === 'envelope';
-  const isAutomaticFutureBufferMode =
-    isFutureBufferModeAvailable && futureBufferMode === 'automatic';
 
   const setFutureBufferMode = async (mode: FutureBufferMode) => {
     await send('budget/set-future-buffer-mode', { mode });
@@ -42,14 +40,15 @@ export function useFutureBufferMode(): UseFutureBufferModeResult {
     );
   };
 
-  const isCurrentOrFutureMonth = (month: string) =>
+  const isManagedMonth = (month: string) =>
+    isFutureBufferModeAvailable &&
+    futureBufferMode === 'automatic' &&
     month >= monthUtils.currentMonth();
 
   return {
     futureBufferMode,
     isFutureBufferModeAvailable,
-    isAutomaticFutureBufferMode,
-    isCurrentOrFutureMonth,
+    isManagedMonth,
     setFutureBufferMode,
   };
 }

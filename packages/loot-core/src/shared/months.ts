@@ -90,12 +90,6 @@ export function monthFromDate(date: DateLike): string {
   return d.format(_parse(date), 'yyyy-MM');
 }
 
-// Converts a numeric budget-table month (e.g. 202403) to `yyyy-MM`.
-export function fromDbMonth(month: number): string {
-  const monthString = String(month).padStart(6, '0');
-  return `${monthString.slice(0, 4)}-${monthString.slice(4)}`;
-}
-
 export function isValidYearMonth(value: string): boolean {
   const match = /^(\d{4})-(\d{2})$/.exec(value);
   if (!match) return false;
