@@ -689,6 +689,14 @@ export async function coverOverspending({
   amount?: IntegerAmount;
   currencyCode: string;
 }): Promise<void> {
+  if (
+    from === 'for-next-month' &&
+    isFutureBufferModeActive() &&
+    isCurrentOrFutureMonth(month)
+  ) {
+    return;
+  }
+
   const sheetName = monthUtils.sheetForMonth(month);
   const toBudgeted = await getSheetValue(sheetName, 'budget-' + to);
 
@@ -716,10 +724,12 @@ export async function coverOverspending({
 
   await batchMessages(async () => {
     if (from === 'for-next-month') {
-      // Disable income auto-hold before writing the remaining selected buffer.
-      // Otherwise a full cover writes manual buffer 0 and buffered-selected
-      // immediately falls back to the unchanged automatic buffer.
-      await resetIncomeCarryover({ month });
+      // When the selected buffer comes from income auto-hold, disable it before
+      // writing the remaining buffer. Otherwise a full cover writes manual
+      // buffer 0 and immediately falls back to the unchanged automatic buffer.
+      if ((await getSheetValue(sheetName, 'buffered')) === 0) {
+        await resetIncomeCarryover({ month });
+      }
       await setBuffer(month, leftoverFrom - coverableAmount);
     } else if (from !== 'to-budget') {
       const fromBudgeted = await getSheetValue(sheetName, 'budget-' + from);

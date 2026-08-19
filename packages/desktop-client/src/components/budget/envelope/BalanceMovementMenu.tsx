@@ -98,6 +98,7 @@ export function BalanceMovementMenu({
         <CoverMenu
           categoryId={categoryId}
           initialAmount={catBalance}
+          month={month}
           showForNextMonth
           onClose={onClose}
           onSubmit={(amount, fromCategoryId) => {

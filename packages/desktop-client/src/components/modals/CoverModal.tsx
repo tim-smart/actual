@@ -34,7 +34,7 @@ export function CoverModal({
   onSubmit,
 }: CoverModalProps) {
   const { t } = useTranslation();
-  const { isFutureBufferModeAvailable } = useFutureBufferMode();
+  const { isFutureBufferModeAvailable, isManagedMonth } = useFutureBufferMode();
   const [hideFraction] = useSyncedPref('hideFraction');
 
   const { data: { grouped: originalCategoryGroups } = { grouped: [] } } =
@@ -43,7 +43,10 @@ export function CoverModal({
     const expenseGroups = originalCategoryGroups.filter(g => !g.is_income);
     const categoryGroups = showToBeBudgeted
       ? addToBeBudgetedGroup(expenseGroups, {
-          includeForNextMonth: showForNextMonth && isFutureBufferModeAvailable,
+          includeForNextMonth:
+            showForNextMonth &&
+            isFutureBufferModeAvailable &&
+            !isManagedMonth(month),
         })
       : expenseGroups;
     const filteredCategoryGroups = categoryId
@@ -55,10 +58,12 @@ export function CoverModal({
     return [filteredCategoryGroups, filteredCategoryies];
   }, [
     categoryId,
+    month,
     originalCategoryGroups,
     showToBeBudgeted,
     showForNextMonth,
     isFutureBufferModeAvailable,
+    isManagedMonth,
   ]);
 
   const [fromCategoryId, setFromCategoryId] = useState<string | null>(null);

@@ -23,6 +23,7 @@ import { useCategories } from '#hooks/useCategories';
 import { useFutureBufferMode } from '#hooks/useFutureBufferMode';
 
 type CoverMenuProps = {
+  month: string;
   showToBeBudgeted?: boolean;
   showForNextMonth?: boolean;
   initialAmount?: IntegerAmount | null;
@@ -32,6 +33,7 @@ type CoverMenuProps = {
 };
 
 export function CoverMenu({
+  month,
   showToBeBudgeted = true,
   showForNextMonth = false,
   initialAmount = 0,
@@ -40,7 +42,7 @@ export function CoverMenu({
   onClose,
 }: CoverMenuProps) {
   const { t } = useTranslation();
-  const { isFutureBufferModeAvailable } = useFutureBufferMode();
+  const { isFutureBufferModeAvailable, isManagedMonth } = useFutureBufferMode();
 
   const { data: { grouped: originalCategoryGroups } = { grouped: [] } } =
     useCategories();
@@ -51,7 +53,10 @@ export function CoverMenu({
     const expenseGroups = originalCategoryGroups.filter(g => !g.is_income);
     const categoryGroups = showToBeBudgeted
       ? addToBeBudgetedGroup(expenseGroups, {
-          includeForNextMonth: showForNextMonth && isFutureBufferModeAvailable,
+          includeForNextMonth:
+            showForNextMonth &&
+            isFutureBufferModeAvailable &&
+            !isManagedMonth(month),
         })
       : expenseGroups;
     return categoryId
@@ -59,9 +64,11 @@ export function CoverMenu({
       : categoryGroups;
   }, [
     categoryId,
+    month,
     showToBeBudgeted,
     showForNextMonth,
     isFutureBufferModeAvailable,
+    isManagedMonth,
     originalCategoryGroups,
   ]);
 

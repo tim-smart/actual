@@ -135,6 +135,7 @@ export function ToBudget({
             <CoverMenu
               showToBeBudgeted={false}
               initialAmount={availableValue}
+              month={month}
               onClose={closeMenu}
               onSubmit={(amount, categoryId) => {
                 onBudgetAction(month, 'cover-overbudgeted', {

@@ -323,6 +323,75 @@ describe('future buffer mode', () => {
     expect(await getSheetValue('budget202403', 'to-budget')).toBe(0);
   });
 
+  it('does not cover overspending from an automatically managed buffer', async () => {
+    await setupFutureBufferModeDatabase(['2024-03', '2024-04']);
+    await db.insertTransaction({
+      date: '2024-03-01',
+      amount: 10000,
+      account: 'account1',
+      category: 'income-cat',
+    });
+    await db.insertTransaction({
+      date: '2024-03-01',
+      amount: -2000,
+      account: 'account1',
+      category: 'cat1',
+    });
+    await setCategoryCarryover({
+      startMonth: '2024-03',
+      category: 'cat1',
+      flag: true,
+    });
+    await setBudget({ category: 'cat1', month: '2024-04', amount: 5000 });
+    enableFutureBufferModePrefs();
+    await sheet.waitOnSpreadsheet();
+    await recalculateFutureBuffer();
+
+    expect(await getSheetValue('budget202403', 'budget-cat1')).toBe(0);
+    expect(await getSheetValue('budget202403', 'leftover-cat1')).toBe(-2000);
+    expect(await getSheetValue('budget202403', 'buffered-selected')).toBe(5000);
+    expect(await getSheetValue('budget202403', 'to-budget')).toBe(5000);
+
+    await runHandler(app.handlers['budget/cover-overspending'], {
+      month: '2024-03',
+      to: 'cat1',
+      from: 'for-next-month',
+      amount: 1000,
+      currencyCode: 'USD',
+    });
+
+    expect(await getSheetValue('budget202403', 'budget-cat1')).toBe(0);
+    expect(await getSheetValue('budget202403', 'leftover-cat1')).toBe(-2000);
+    expect(await getSheetValue('budget202403', 'buffered-selected')).toBe(5000);
+    expect(await getSheetValue('budget202403', 'to-budget')).toBe(5000);
+  });
+
+  it('preserves income auto-hold when covering from a manual buffer', async () => {
+    await setupAutoHeldBufferForCover();
+    await setBuffer('2024-03', 4000);
+    await sheet.waitOnSpreadsheet();
+
+    expect(await getCarryover('2024-03', 'income-cat')).toBe(true);
+    expect(await getSheetValue('budget202403', 'buffered-selected')).toBe(4000);
+    expect(await getSheetValue('budget202403', 'to-budget')).toBe(6000);
+
+    await runHandler(app.handlers['budget/cover-overspending'], {
+      month: '2024-03',
+      to: 'cat1',
+      from: 'for-next-month',
+      amount: 1000,
+      currencyCode: 'USD',
+    });
+
+    expect(await getSheetValue('budget202403', 'budget-cat1')).toBe(1000);
+    expect(await getSheetValue('budget202403', 'leftover-cat1')).toBe(-9000);
+    expect(await getSheetValue('budget202403', 'buffered')).toBe(3000);
+    expect(await getSheetValue('budget202403', 'buffered-auto')).toBe(10000);
+    expect(await getSheetValue('budget202403', 'buffered-selected')).toBe(3000);
+    expect(await getSheetValue('budget202403', 'to-budget')).toBe(6000);
+    expect(await getCarryover('2024-03', 'income-cat')).toBe(true);
+  });
+
   it('recalculates after adding, deleting, and recategorizing current-month transactions through the handler', async () => {
     await setupFutureBufferModeDatabase(['2024-03', '2024-04']);
     await setBudget({ category: 'cat2', month: '2024-03', amount: 20000 });
