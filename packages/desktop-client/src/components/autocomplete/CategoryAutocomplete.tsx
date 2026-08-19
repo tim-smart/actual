@@ -364,7 +364,10 @@ function CategoryItem({
   const [budgetType = 'envelope'] = useSyncedPref('budgetType');
 
   const balanceBinding = getCategoryBinding(budgetType, item.id);
-  const balance = useSheetValue(balanceBinding);
+  const balance = useSheetValue<
+    'envelope-budget',
+    'to-budget' | 'buffered-selected' | 'leftover'
+  >(balanceBinding);
 
   return (
     <button
@@ -423,8 +426,9 @@ function CategoryItem({
 function getCategoryBinding(
   budgetType: string,
   categoryId: string,
-  // oxlint-disable-next-line typescript/no-explicit-any
-): Binding<'envelope-budget' | 'tracking-budget', any> {
+):
+  | Binding<'envelope-budget', 'to-budget' | 'buffered-selected' | 'leftover'>
+  | Binding<'tracking-budget', 'leftover'> {
   const budget = budgetType === 'envelope' ? envelopeBudget : trackingBudget;
   switch (categoryId) {
     case 'to-budget':

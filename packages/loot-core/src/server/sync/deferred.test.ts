@@ -6,7 +6,7 @@ import * as db from '#server/db';
 import { replayPendingMessages } from './replay';
 import { deserializeValueSafe } from './serialization';
 
-import { applyMessagesWithHooks, setSyncingMode } from './index';
+import { applyMessages, setSyncingMode } from './index';
 
 beforeEach(() => {
   setSyncingMode('enabled');
@@ -43,7 +43,7 @@ describe('Deferred sync messages (newer schema)', () => {
     replayPendingMessages();
 
     // ...and deferral must still store the message, not fail the batch
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'transactions',
@@ -59,7 +59,7 @@ describe('Deferred sync messages (newer schema)', () => {
   });
 
   it('defers messages for unknown columns without failing the batch', async () => {
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'transactions',
@@ -106,7 +106,7 @@ describe('Deferred sync messages (newer schema)', () => {
 
   it('does not defer local messages: unknown schema is a bug and must fail', async () => {
     await expect(
-      applyMessagesWithHooks([
+      applyMessages([
         {
           dataset: 'transactions',
           row: 't1',
@@ -121,7 +121,7 @@ describe('Deferred sync messages (newer schema)', () => {
   });
 
   it('replays pending messages once the schema catches up, last write wins', async () => {
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'transactions',
@@ -207,7 +207,7 @@ describe('Deferred sync messages (newer schema)', () => {
   });
 
   it('drops a message that can never apply without blocking the rest', async () => {
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'gadgets',
@@ -245,7 +245,7 @@ describe('Deferred sync messages (newer schema)', () => {
   });
 
   it('defers an inbound message whose value uses a newer serialization format', async () => {
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           // Even though the column exists, the value can't be decoded —
@@ -275,7 +275,7 @@ describe('Deferred sync messages (newer schema)', () => {
   });
 
   it('applies dependency chains among deferred cells', async () => {
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'gadgets',
@@ -325,7 +325,7 @@ describe('Deferred sync messages (newer schema)', () => {
   });
 
   it('does not replay a deferred value over a newer applied write', async () => {
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'transactions',
@@ -339,7 +339,7 @@ describe('Deferred sync messages (newer schema)', () => {
     );
     // A later, decodable write to the same cell applies through normal
     // sync while the undecodable one sits pending
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'transactions',
@@ -365,7 +365,7 @@ describe('Deferred sync messages (newer schema)', () => {
   });
 
   it('keeps a message whose value uses a newer serialization format', async () => {
-    await applyMessagesWithHooks(
+    await applyMessages(
       [
         {
           dataset: 'gadgets',

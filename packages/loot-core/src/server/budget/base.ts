@@ -1,8 +1,8 @@
+import { logger } from '#platform/server/log';
 import { aqlQuery } from '#server/aql';
 import * as db from '#server/db';
 import * as sheet from '#server/sheet';
 import { resolveName } from '#server/spreadsheet/util';
-import { runBudgetChangeHooks } from '#server/sync/hooks';
 // @ts-strict-ignore
 import * as monthUtils from '#shared/months';
 import { q } from '#shared/query';
@@ -372,10 +372,7 @@ function addFutureBufferTouchedMonths({
   }
 
   if (table === 'zero_budgets') {
-    if (
-      changedFields.size === 0 ||
-      hasChangedField(changedFields, FUTURE_BUFFER_BUDGET_FIELDS)
-    ) {
+    if (hasChangedField(changedFields, FUTURE_BUFFER_BUDGET_FIELDS)) {
       addBudgetMonths(months, oldValue, newValue);
 
       if (
@@ -386,10 +383,7 @@ function addFutureBufferTouchedMonths({
       }
     }
   } else if (table === 'reflect_budgets') {
-    if (
-      changedFields.size === 0 ||
-      hasChangedField(changedFields, FUTURE_BUFFER_BUDGET_FIELDS)
-    ) {
+    if (hasChangedField(changedFields, FUTURE_BUFFER_BUDGET_FIELDS)) {
       addBudgetMonths(months, oldValue, newValue);
     }
   } else if (table === 'transactions') {
@@ -491,10 +485,9 @@ function addCreatedMonths(months: Set<string>, createdMonths: Set<string>) {
 }
 
 export async function doTransfer(categoryIds, transferId) {
-  const { createdMonths = new Set<string>() } = sheet.get().meta();
-  const months = [...createdMonths];
+  const { createdMonths: months } = sheet.get().meta();
 
-  for (const month of months) {
+  [...months].forEach(month => {
     const totalValue = categoryIds
       .map(id => {
         return budgetActions.getBudget({ month, category: id });
@@ -506,12 +499,12 @@ export async function doTransfer(categoryIds, transferId) {
       category: transferId,
     });
 
-    await budgetActions.setBudget({
+    void budgetActions.setBudget({
       month,
       category: transferId,
       amount: totalValue + transferValue,
     });
-  }
+  });
 }
 
 export async function createBudget(months) {
@@ -639,8 +632,12 @@ export async function createAllBudgets() {
   if (newMonths.length > 0) {
     await createBudget(range);
 
-    if (newMonths.some(month => month >= currentMonth)) {
-      await runBudgetChangeHooks(newMonths);
+    // Best effort: this runs on budget load through get-budget-bounds, so
+    // a recalculation failure must not fail budget loading.
+    try {
+      await budgetActions.maybeRecalculateFutureBuffer(newMonths);
+    } catch (error) {
+      logger.error('Failed to recalculate future buffer', error);
     }
   }
 

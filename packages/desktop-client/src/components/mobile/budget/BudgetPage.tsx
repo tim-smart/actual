@@ -43,7 +43,7 @@ import {
   useSortCategoriesMutation,
 } from '#budget';
 import { closeBudget } from '#budgetfiles/budgetfilesSlice';
-import { prewarmMonth } from '#components/budget/util';
+import { getCoverSourceName, prewarmMonth } from '#components/budget/util';
 import { FinancialText } from '#components/FinancialText';
 import { MobilePageHeader, Page } from '#components/Page';
 import { SyncRefresh } from '#components/SyncRefresh';
@@ -856,12 +856,10 @@ function OverspendingBanner({ month, onBudgetAction, budgetType, ...props }) {
                     `Covered {{toCategoryName}} overspending from {{fromCategoryName}}.`,
                     {
                       toCategoryName: category.name,
-                      fromCategoryName:
-                        fromCategoryId === 'to-budget'
-                          ? t('To Budget')
-                          : fromCategoryId === 'for-next-month'
-                            ? t('For next month')
-                            : categoriesById[fromCategoryId].name,
+                      fromCategoryName: getCoverSourceName(
+                        fromCategoryId,
+                        categoriesById,
+                      ),
                     },
                   ),
                 });

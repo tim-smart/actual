@@ -11,6 +11,7 @@ import { captureException } from '#platform/exceptions';
 import * as asyncStorage from '#platform/server/asyncStorage';
 import * as connection from '#platform/server/connection';
 import { logger } from '#platform/server/log';
+import { maybeRecalculateFutureBuffer } from '#server/budget/actions';
 import {
   setType as setBudgetType,
   triggerBudgetChanges,
@@ -31,7 +32,6 @@ import { getIn, setIn } from '#shared/util';
 import type { MetadataPrefs } from '#types/prefs';
 
 import * as encoder from './encoder';
-import { runBudgetChangeHooks } from './hooks';
 import { PENDING_MESSAGES_TABLE_SQL } from './messages-pending';
 import { rebuildMerkleHash } from './repair';
 import {
@@ -639,16 +639,19 @@ async function _applyMessages(messages: Message[], deferUnknownSchema = false) {
   } as const;
 }
 
-const applyMessages = sequential(_applyMessages);
+const applyMessagesInternal = sequential(_applyMessages);
 
-export async function applyMessagesWithHooks(
+export async function applyMessages(
   inputMessages: Message[],
   deferUnknownSchema = false,
 ): Promise<Message[]> {
-  const result = await applyMessages(inputMessages, deferUnknownSchema);
+  const result = await applyMessagesInternal(inputMessages, deferUnknownSchema);
 
+  // The recalculation must run after the sequential apply has resolved: it
+  // writes budget data through sendMessages, which would deadlock if it
+  // were awaited while applyMessagesInternal is still running.
   if (result?.budgetChangeTouchedMonths) {
-    await runBudgetChangeHooks(result.budgetChangeTouchedMonths).catch(
+    await maybeRecalculateFutureBuffer(result.budgetChangeTouchedMonths).catch(
       errorHandler,
     );
   }
@@ -683,7 +686,7 @@ export function receiveMessages(messages: Message[]): Promise<Message[]> {
 
   // Inbound messages may come from a newer version of the app, so
   // unknown-schema errors defer instead of failing the batch
-  return runMutator(() => applyMessagesWithHooks(messages, true));
+  return runMutator(() => applyMessages(messages, true));
 }
 
 async function errorHandler(e: Error) {
@@ -714,7 +717,7 @@ async function errorHandler(e: Error) {
 
 async function _sendMessages(messages: Message[]): Promise<void> {
   try {
-    await applyMessagesWithHooks(messages);
+    await applyMessages(messages);
   } catch (e) {
     void errorHandler(e);
     throw e;

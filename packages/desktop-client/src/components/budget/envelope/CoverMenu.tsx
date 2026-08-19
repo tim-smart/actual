@@ -21,7 +21,7 @@ import {
   removeCategoriesFromGroups,
 } from '#components/budget/util';
 import { useCategories } from '#hooks/useCategories';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFutureBufferMode } from '#hooks/useFutureBufferMode';
 
 type CoverMenuProps = {
   showToBeBudgeted?: boolean;
@@ -41,7 +41,7 @@ export function CoverMenu({
   onClose,
 }: CoverMenuProps) {
   const { t } = useTranslation();
-  const isFutureBufferModeAvailable = useFeatureFlag('futureBufferMode');
+  const { isFutureBufferModeAvailable } = useFutureBufferMode();
 
   const { data: { grouped: originalCategoryGroups } = { grouped: [] } } =
     useCategories();

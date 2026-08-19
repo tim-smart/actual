@@ -570,11 +570,7 @@ function trackJSONPaths() {
     });
   });
 
-  const unlisten = addSyncListener(onApplySync);
-  return async () => {
-    unlisten();
-    await pendingScheduleService;
-  };
+  return addSyncListener(onApplySync);
 }
 
 function onApplySync(oldValues, newValues) {
@@ -589,22 +585,6 @@ function onApplySync(oldValues, newValues) {
 
 // This is the service that move schedules forward automatically and
 // posts transactions
-
-let pendingScheduleService: Promise<void> | null = null;
-
-function runScheduleService(syncSuccess: boolean) {
-  const promise = runMutator(() => advanceSchedulesService(syncSuccess))
-    .catch(error => {
-      logger.log('Error running schedules service', error);
-    })
-    .finally(() => {
-      if (pendingScheduleService === promise) {
-        pendingScheduleService = null;
-      }
-    });
-
-  pendingScheduleService = promise;
-}
 
 async function postTransactionForSchedule({
   id,
@@ -889,7 +869,7 @@ app.events.on('sync', ({ type }) => {
 
     const { lastScheduleRun } = prefs.getPrefs();
     if (lastScheduleRun !== currentDay()) {
-      runScheduleService(type === 'success');
+      void runMutator(() => advanceSchedulesService(type === 'success'));
 
       // Only mark the day as done when sync succeeded, so that
       // schedule auto-posting is retried on subsequent successful syncs

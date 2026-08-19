@@ -334,12 +334,17 @@ describe('future buffer mode', () => {
 
     global.currentMonth = '2024-03';
     await setBuffer('2024-03', 456);
+    // Changed budget so the copy below writes a new value; unchanged
+    // values are skipped and do not trigger a recalculation.
+    await setBudget({ category: 'cat1', month: '2024-02', amount: 60000 });
+    await sheet.waitOnSpreadsheet();
 
     await runHandler(app.handlers['budget/copy-until-year-end'], {
       month: '2024-02',
       category: 'cat1',
     });
 
+    expect(await getSheetValue('budget202403', 'budget-cat1')).toBe(60000);
     expect(await getBuffered('2024-03')).toBe(0);
   });
 

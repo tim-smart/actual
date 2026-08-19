@@ -213,7 +213,7 @@ async function getCategories({ hidden }: { hidden?: boolean } = {}) {
 }
 
 async function getBudgetBounds() {
-  return budget.createAllBudgets();
+  return await budget.createAllBudgets();
 }
 
 async function envelopeBudgetMonth({ month }: { month: string }) {

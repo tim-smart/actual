@@ -56,6 +56,17 @@ export function addForNextMonthGroup(groups: CategoryGroupEntity[]) {
   );
 }
 
+export function getCoverSourceName(
+  fromCategoryId: CategoryEntity['id'],
+  categoriesById: Record<CategoryEntity['id'], CategoryEntity>,
+): string {
+  return fromCategoryId === 'to-budget'
+    ? t('To Budget')
+    : fromCategoryId === 'for-next-month'
+      ? t('For next month')
+      : categoriesById[fromCategoryId].name;
+}
+
 export function removeCategoriesFromGroups(
   categoryGroups: CategoryGroupEntity[],
   ...categoryIds: CategoryEntity['id'][]

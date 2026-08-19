@@ -76,20 +76,28 @@ export function once<T extends AnyFunction>(
 }
 
 /**
- * Ensures that the function is only called one at a time.
- * While the function is running, overlapping calls will return immediately.
+ * Ensures that the function is only called one at a time. Overlapping
+ * calls return immediately and are coalesced into a single trailing
+ * rerun, so a call made while the function is running is never dropped.
  */
-export function single<T extends AnyFunction>(
+export function coalesced<T extends AnyFunction>(
   fn: T,
 ): (...args: Parameters<T>) => Promise<void> {
   let running = false;
-  return (...args: Parameters<T>) => {
-    if (!running) {
-      running = true;
-      return fn(...args).finally(() => {
-        running = false;
-      });
+  let pending = false;
+  return async (...args: Parameters<T>) => {
+    if (running) {
+      pending = true;
+      return;
     }
-    return Promise.resolve();
+    running = true;
+    try {
+      do {
+        pending = false;
+        await fn(...args);
+      } while (pending);
+    } finally {
+      running = false;
+    }
   };
 }

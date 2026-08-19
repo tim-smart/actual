@@ -15,7 +15,7 @@ type Events = {
   'load-budget': { id: string };
 };
 
-type UnlistenService = () => void | Promise<void>;
+type UnlistenService = () => void;
 type Service = () => UnlistenService;
 
 class App<Handlers> {
@@ -77,11 +77,11 @@ class App<Handlers> {
   }
 
   async stopServices() {
-    await Promise.all(
-      this.unlistenServices.map(async unlisten => {
-        await unlisten();
-      }),
-    );
+    this.unlistenServices.forEach(unlisten => {
+      if (unlisten) {
+        unlisten();
+      }
+    });
     this.unlistenServices = [];
   }
 }
