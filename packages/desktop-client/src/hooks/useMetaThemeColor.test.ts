@@ -30,13 +30,19 @@ function clearCssVar(name: string) {
   document.documentElement.style.removeProperty(name);
 }
 
+function clearThemeCssVars() {
+  clearCssVar('--color-mobileViewTheme');
+  clearCssVar('--color-mobileHeaderBackground');
+  clearCssVar('--palette-customHeader');
+}
+
 beforeEach(() => {
   vi.mocked(useTheme).mockReturnValue(['light', vi.fn()]);
   vi.mocked(usePreferredDarkTheme).mockReturnValue(['dark', vi.fn()]);
   document.body.style.backgroundColor = '';
   document.documentElement.style.backgroundColor = '';
   removeThemeColorMeta();
-  clearCssVar('--color-mobileViewTheme');
+  clearThemeCssVars();
 });
 
 afterEach(() => {
@@ -90,7 +96,40 @@ describe('useMetaThemeColor', () => {
       expect(document.body.style.backgroundColor).toBe('rgb(254, 220, 186)');
     });
 
+    it('resolves nested theme vars to a concrete color', () => {
+      setCssVar(
+        '--color-mobileViewTheme',
+        'var(--color-mobileHeaderBackground)',
+      );
+      setCssVar(
+        '--color-mobileHeaderBackground',
+        'var(--palette-customHeader)',
+      );
+      setCssVar('--palette-customHeader', '#9446ed');
+
+      renderHook(() => useMetaThemeColor('var(--color-mobileViewTheme)'));
+
+      expect(getThemeColorMeta()).toBe('#9446ed');
+      expect(document.body.style.backgroundColor).toBe('rgb(148, 70, 237)');
+    });
+
     it('uses default when resolved var is empty', () => {
+      renderHook(() => useMetaThemeColor('var(--color-mobileViewTheme)'));
+
+      expect(getThemeColorMeta()).toBe(DEFAULT_THEME_COLOR);
+      expect(document.body.style.backgroundColor).toBe('rgb(92, 61, 187)');
+    });
+
+    it('uses default when theme vars form a cycle', () => {
+      setCssVar(
+        '--color-mobileViewTheme',
+        'var(--color-mobileHeaderBackground)',
+      );
+      setCssVar(
+        '--color-mobileHeaderBackground',
+        'var(--color-mobileViewTheme)',
+      );
+
       renderHook(() => useMetaThemeColor('var(--color-mobileViewTheme)'));
 
       expect(getThemeColorMeta()).toBe(DEFAULT_THEME_COLOR);
@@ -100,15 +139,21 @@ describe('useMetaThemeColor', () => {
 
   describe('theme reactivity', () => {
     it('re-runs effect when activeTheme changes', () => {
-      setCssVar('--color-mobileViewTheme', '#111');
+      setCssVar(
+        '--color-mobileViewTheme',
+        'var(--color-mobileHeaderBackground)',
+      );
+      setCssVar('--color-mobileHeaderBackground', '#111');
       const { rerender } = renderHook(() =>
         useMetaThemeColor('var(--color-mobileViewTheme)'),
       );
+      expect(getThemeColorMeta()).toBe('#111');
       expect(document.body.style.backgroundColor).toBe('rgb(17, 17, 17)');
 
-      setCssVar('--color-mobileViewTheme', '#222');
+      setCssVar('--color-mobileHeaderBackground', '#222');
       vi.mocked(useTheme).mockReturnValue(['dark', vi.fn()]);
       rerender();
+      expect(getThemeColorMeta()).toBe('#222');
       expect(document.body.style.backgroundColor).toBe('rgb(34, 34, 34)');
     });
 

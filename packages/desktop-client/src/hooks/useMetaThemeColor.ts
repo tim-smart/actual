@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { usePreferredDarkTheme, useTheme } from '#style/theme';
 
-const VAR_STRING_REGEX = /^var\((--.*)\)$/;
+const VAR_STRING_REGEX = /^var\(\s*(--[^),\s]+)\s*\)$/;
 const DEFAULT_THEME_COLOR = '#5c3dbb';
 
 /**
@@ -82,13 +82,21 @@ function setThemeColorMetaContent(color: string) {
   }
 }
 
-function getPropertyValueFromVarString(varString: string) {
-  if (!VAR_STRING_REGEX.test(varString)) return varString;
+function getPropertyValueFromVarString(
+  varString: string,
+  seenVariables = new Set<string>(),
+): string {
   const match = varString.match(VAR_STRING_REGEX);
-  return match
-    ? window
-        .getComputedStyle(document.documentElement)
-        .getPropertyValue(match[1])
-        .trim()
-    : varString;
+  if (!match) return varString;
+
+  const variableName = match[1];
+  if (seenVariables.has(variableName)) return '';
+
+  seenVariables.add(variableName);
+  const value = window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue(variableName)
+    .trim();
+
+  return value ? getPropertyValueFromVarString(value, seenVariables) : value;
 }
