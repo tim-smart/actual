@@ -8,6 +8,11 @@ import { useMetaThemeColor } from './useMetaThemeColor';
 const DEFAULT_THEME_COLOR = '#5c3dbb';
 const originalMatchMedia = window.matchMedia;
 
+// These isolated hook cases start without any installed theme or CSS override.
+vi.mock('#hooks/useGlobalPref', () => ({
+  useGlobalPref: () => [undefined, vi.fn()],
+}));
+
 vi.mock('#style/theme', () => ({
   useTheme: vi.fn(),
   usePreferredDarkTheme: vi.fn(),
