@@ -275,10 +275,11 @@ const FUTURE_BUFFER_CATEGORY_GROUP_FIELDS = [
   'tombstone',
 ];
 
-export function triggerBudgetChanges(oldValues, newValues) {
+// Returns whether the changes should trigger a future buffer recalculation.
+export function triggerBudgetChanges(oldValues, newValues): boolean {
   const { createdMonths = new Set() } = sheet.get().meta();
-  const futureBufferTouchedMonths = new Set<string>();
   const trackFutureBuffer = budgetActions.isFutureBufferModeActive();
+  let futureBufferTouched = false;
   const budgetType = getBudgetType();
   sheet.startTransaction();
 
@@ -289,15 +290,8 @@ export function triggerBudgetChanges(oldValues, newValues) {
       items.forEach(newValue => {
         const oldValue = old && old.get(newValue.id);
 
-        if (trackFutureBuffer) {
-          addFutureBufferTouchedMonths({
-            months: futureBufferTouchedMonths,
-            table,
-            oldValue,
-            newValue,
-            createdMonths,
-          });
-        }
+        futureBufferTouched ||=
+          trackFutureBuffer && touchesFutureBuffer(table, oldValue, newValue);
 
         if (table === 'zero_budget_months') {
           handleBudgetMonthChange(newValue);
@@ -351,100 +345,64 @@ export function triggerBudgetChanges(oldValues, newValues) {
     sheet.endTransaction();
   }
 
-  return futureBufferTouchedMonths;
+  return futureBufferTouched;
 }
 
-function addFutureBufferTouchedMonths({
-  months,
-  table,
-  oldValue,
-  newValue,
-  createdMonths,
-}: {
-  months: Set<string>;
-  table: string;
-  oldValue: unknown;
-  newValue: unknown;
-  createdMonths: Set<string>;
-}) {
-  if (table === 'zero_budget_months') {
-    return;
-  }
-
+// Whether a row change can move the automatic future buffer, which only
+// covers the current month and later ones.
+function touchesFutureBuffer(table: string, oldValue, newValue): boolean {
   const changedFields = new Set(
     Object.keys(getChangedValues(oldValue || {}, newValue) || {}),
   );
   const hasChanged = (fields: string[]) =>
     fields.some(field => changedFields.has(field));
-  const addCreatedMonths = () =>
-    createdMonths.forEach(month => months.add(month));
 
-  if (table === 'zero_budgets') {
-    if (hasChanged(FUTURE_BUFFER_BUDGET_FIELDS)) {
-      addBudgetMonths(months, oldValue, newValue);
-
+  switch (table) {
+    case 'zero_budgets':
+    case 'reflect_budgets': {
+      if (!hasChanged(FUTURE_BUFFER_BUDGET_FIELDS)) {
+        return false;
+      }
+      const months = [oldValue, newValue]
+        .filter(budget => budget?.month)
+        .map(budget => budgetActions.monthFromDbMonth(budget.month));
+      // Carrying a balance over also changes the next month's overspending.
       if (
+        table === 'zero_budgets' &&
         changedFields.has('carryover') &&
         (oldValue || isCarryoverEnabled(newValue))
       ) {
-        addBudgetMonths(months, oldValue, newValue, monthUtils.nextMonth);
+        months.push(...months.map(month => monthUtils.nextMonth(month)));
       }
+      return months.some(month => budgetActions.isCurrentOrFutureMonth(month));
     }
-  } else if (table === 'reflect_budgets') {
-    if (hasChanged(FUTURE_BUFFER_BUDGET_FIELDS)) {
-      addBudgetMonths(months, oldValue, newValue);
-    }
-  } else if (table === 'transactions') {
-    if (hasChanged(FUTURE_BUFFER_TRANSACTION_FIELDS)) {
-      if (oldValue) {
-        addTransactionMonth(months, oldValue);
-      }
-      addTransactionMonth(months, newValue);
-    }
-  } else if (table === 'accounts') {
-    if (!oldValue || changedFields.has('offbudget')) {
-      addCreatedMonths();
-    }
-  } else if (table === 'categories') {
-    if (hasChanged(FUTURE_BUFFER_CATEGORY_FIELDS)) {
-      addCreatedMonths();
-    }
-  } else if (table === 'category_groups') {
-    if (hasChanged(FUTURE_BUFFER_CATEGORY_GROUP_FIELDS)) {
-      addCreatedMonths();
-    }
-  } else if (table === 'category_mapping') {
-    addCreatedMonths();
-  }
-}
-
-function addBudgetMonths(
-  months: Set<string>,
-  oldValue: { month?: number } | null | undefined,
-  newValue: { month?: number },
-  mapMonth = (month: string) => month,
-) {
-  for (const budget of [oldValue, newValue]) {
-    if (budget?.month) {
-      months.add(mapMonth(budgetActions.monthFromDbMonth(budget.month)));
-    }
+    case 'transactions':
+      return (
+        hasChanged(FUTURE_BUFFER_TRANSACTION_FIELDS) &&
+        [oldValue, newValue].some(
+          transaction =>
+            transaction?.date &&
+            transaction.category &&
+            budgetActions.isCurrentOrFutureMonth(
+              monthUtils.monthFromDate(db.fromDateRepr(transaction.date)),
+            ),
+        )
+      );
+    case 'accounts':
+      return !oldValue || changedFields.has('offbudget');
+    case 'categories':
+      return hasChanged(FUTURE_BUFFER_CATEGORY_FIELDS);
+    case 'category_groups':
+      return hasChanged(FUTURE_BUFFER_CATEGORY_GROUP_FIELDS);
+    case 'category_mapping':
+      return true;
+    default:
+      return false;
   }
 }
 
 function isCarryoverEnabled(budget: { carryover?: number | boolean }): boolean {
   return budget.carryover === 1 || budget.carryover === true;
-}
-
-function addTransactionMonth(
-  months: Set<string>,
-  transaction: {
-    date?: number;
-    category?: string;
-  },
-) {
-  if (transaction.date && transaction.category) {
-    months.add(monthUtils.monthFromDate(db.fromDateRepr(transaction.date)));
-  }
 }
 
 export async function doTransfer(categoryIds, transferId) {
@@ -594,7 +552,7 @@ export async function createAllBudgets() {
 
   if (newMonths.length > 0) {
     await createBudget(range);
-    await budgetActions.maybeRecalculateFutureBuffer(newMonths);
+    await budgetActions.tryRecalculateFutureBuffer();
   }
 
   return { start, end };

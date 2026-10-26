@@ -326,7 +326,6 @@ export function ExpenseCategoryListItem({
             month,
             amount: catBalance,
             categoryId: category.id,
-            showForNextMonth: true,
             onSubmit: (amount, fromCategoryId) => {
               onBudgetAction(month, 'cover-overspending', {
                 to: category.id,

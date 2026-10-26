@@ -30,7 +30,6 @@ export function CoverModal({
   categoryId,
   month,
   showToBeBudgeted = true,
-  showForNextMonth = false,
   onSubmit,
 }: CoverModalProps) {
   const { t } = useTranslation();
@@ -44,9 +43,7 @@ export function CoverModal({
     const categoryGroups = showToBeBudgeted
       ? addToBeBudgetedGroup(expenseGroups, {
           includeForNextMonth:
-            showForNextMonth &&
-            isFutureBufferModeAvailable &&
-            !isManagedMonth(month),
+            isFutureBufferModeAvailable && !isManagedMonth(month),
         })
       : expenseGroups;
     const filteredCategoryGroups = categoryId
@@ -61,7 +58,6 @@ export function CoverModal({
     month,
     originalCategoryGroups,
     showToBeBudgeted,
-    showForNextMonth,
     isFutureBufferModeAvailable,
     isManagedMonth,
   ]);

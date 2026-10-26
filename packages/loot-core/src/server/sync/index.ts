@@ -11,7 +11,7 @@ import { captureException } from '#platform/exceptions';
 import * as asyncStorage from '#platform/server/asyncStorage';
 import * as connection from '#platform/server/connection';
 import { logger } from '#platform/server/log';
-import { maybeRecalculateFutureBuffer } from '#server/budget/actions';
+import { tryRecalculateFutureBuffer } from '#server/budget/actions';
 import {
   setType as setBudgetType,
   triggerBudgetChanges,
@@ -564,13 +564,13 @@ async function _applyMessages(messages: Message[], deferUnknownSchema = false) {
     connection.send('prefs-updated');
   }
 
-  let budgetChangeTouchedMonths: Set<string> | null = null;
+  let futureBufferTouched = false;
 
   // In testing, sometimes the spreadsheet isn't loaded, and that's ok
   if (sheet.get()) {
     // Need to clean up these APIs and make them consistent
     sheet.startTransaction();
-    budgetChangeTouchedMonths = triggerBudgetChanges(oldData, newData);
+    futureBufferTouched = triggerBudgetChanges(oldData, newData);
     sheet.get().triggerDatabaseChanges(oldData, newData);
     sheet.endTransaction();
 
@@ -631,7 +631,7 @@ async function _applyMessages(messages: Message[], deferUnknownSchema = false) {
   // `fullSync`. Old messages stay: they were processed (merkled),
   // just superseded.
   return {
-    budgetChangeTouchedMonths,
+    futureBufferTouched,
     messages:
       deferredMessages.size === 0
         ? messages
@@ -650,8 +650,8 @@ export async function applyMessages(
   // The recalculation must run after the sequential apply has resolved: it
   // writes budget data through sendMessages, which would deadlock if it
   // were awaited while applyMessagesInternal is still running.
-  if (result?.budgetChangeTouchedMonths) {
-    await maybeRecalculateFutureBuffer(result.budgetChangeTouchedMonths);
+  if (result?.futureBufferTouched) {
+    await tryRecalculateFutureBuffer();
   }
 
   return result?.messages ?? [];

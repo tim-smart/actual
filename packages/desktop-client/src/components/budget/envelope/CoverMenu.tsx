@@ -25,7 +25,6 @@ import { useFutureBufferMode } from '#hooks/useFutureBufferMode';
 type CoverMenuProps = {
   month: string;
   showToBeBudgeted?: boolean;
-  showForNextMonth?: boolean;
   initialAmount?: IntegerAmount | null;
   categoryId?: CategoryEntity['id'];
   onSubmit: (amount: IntegerAmount, categoryId: CategoryEntity['id']) => void;
@@ -35,7 +34,6 @@ type CoverMenuProps = {
 export function CoverMenu({
   month,
   showToBeBudgeted = true,
-  showForNextMonth = false,
   initialAmount = 0,
   categoryId,
   onSubmit,
@@ -54,9 +52,7 @@ export function CoverMenu({
     const categoryGroups = showToBeBudgeted
       ? addToBeBudgetedGroup(expenseGroups, {
           includeForNextMonth:
-            showForNextMonth &&
-            isFutureBufferModeAvailable &&
-            !isManagedMonth(month),
+            isFutureBufferModeAvailable && !isManagedMonth(month),
         })
       : expenseGroups;
     return categoryId
@@ -66,7 +62,6 @@ export function CoverMenu({
     categoryId,
     month,
     showToBeBudgeted,
-    showForNextMonth,
     isFutureBufferModeAvailable,
     isManagedMonth,
     originalCategoryGroups,

@@ -99,7 +99,6 @@ export function BalanceMovementMenu({
           categoryId={categoryId}
           initialAmount={catBalance}
           month={month}
-          showForNextMonth
           onClose={onClose}
           onSubmit={(amount, fromCategoryId) => {
             onBudgetAction(month, 'cover-overspending', {

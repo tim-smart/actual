@@ -251,7 +251,7 @@ export function isFutureBufferModeActive(): boolean {
   );
 }
 
-function isCurrentOrFutureMonth(month: string): boolean {
+export function isCurrentOrFutureMonth(month: string): boolean {
   return month >= monthUtils.currentMonth();
 }
 
@@ -269,24 +269,12 @@ export const recalculateFutureBuffer = coalesced(
       return;
     }
 
-    const incomeCategories = await db.all<Pick<db.DbCategory, 'id'>>(
-      'SELECT id FROM categories WHERE tombstone = 0 AND is_income = 1',
-    );
-
-    if (incomeCategories.length > 0) {
-      await batchMessages(async () => {
-        for (const month of managedMonths) {
-          for (const category of incomeCategories) {
-            await setCarryover(
-              'zero_budgets',
-              category.id,
-              dbMonth(month).toString(),
-              false,
-            );
-          }
-        }
-      });
-    }
+    // Automatic mode replaces income auto-hold for the managed months.
+    await batchMessages(async () => {
+      for (const month of managedMonths) {
+        await resetIncomeCarryover({ month });
+      }
+    });
 
     await sheet.waitOnSpreadsheet();
 
@@ -332,18 +320,11 @@ export const recalculateFutureBuffer = coalesced(
   },
 );
 
-// Recalculates the future buffer when a budget-affecting change touches
-// the current month or a future month. Called directly from the places
-// that produce such changes: sync message application, budget month
-// creation, and income carryover updates. Best effort: those callers must
-// not fail when the recalculation does, so errors are only logged.
-export async function maybeRecalculateFutureBuffer(
-  months: Iterable<string>,
-): Promise<void> {
-  if (![...months].some(isCurrentOrFutureMonth)) {
-    return;
-  }
-
+// Best effort recalculation for the places that produce budget-affecting
+// changes (sync message application and budget month creation). Those
+// callers must not fail when the recalculation does, so errors are only
+// logged.
+export async function tryRecalculateFutureBuffer(): Promise<void> {
   try {
     await recalculateFutureBuffer();
   } catch (error) {
@@ -892,28 +873,25 @@ export async function setCategoryCarryover({
   flag: boolean;
 }): Promise<void> {
   const table = getBudgetTable();
-  const isFutureBufferActiveForIncome =
-    isFutureBufferModeActive() &&
-    (
-      await db.first<Pick<db.DbViewCategory, 'is_income'>>(
-        'SELECT is_income FROM v_categories WHERE id = ?',
-        [category],
-      )
-    )?.is_income === 1;
-  const allMonths = getAllMonths(startMonth);
-  const months = isFutureBufferActiveForIncome
-    ? allMonths.filter(month => !isCurrentOrFutureMonth(month))
-    : allMonths;
+  let months = getAllMonths(startMonth);
+
+  // Automatic future buffer mode owns income auto-hold for the current and
+  // future months, so only past months can be changed directly.
+  if (isFutureBufferModeActive()) {
+    const categoryRow = await db.first<Pick<db.DbViewCategory, 'is_income'>>(
+      'SELECT is_income FROM v_categories WHERE id = ?',
+      [category],
+    );
+    if (categoryRow?.is_income === 1) {
+      months = months.filter(month => !isCurrentOrFutureMonth(month));
+    }
+  }
 
   await batchMessages(async () => {
     for (const month of months) {
       void setCarryover(table, category, dbMonth(month).toString(), flag);
     }
   });
-
-  if (isFutureBufferActiveForIncome) {
-    await maybeRecalculateFutureBuffer(allMonths);
-  }
 }
 
 function addNewLine(notes?: string) {

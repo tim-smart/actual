@@ -175,7 +175,7 @@ describe('async', () => {
     expect(calls).toEqual([1, 1]);
   });
 
-  test('coalesced fn should preserve a trailing rerun when the active run throws', async () => {
+  test('coalesced fn should reject the first caller and drop the rerun when the active run throws', async () => {
     let releaseFirstCall: () => void = () => {
       throw new Error('First call did not start');
     };
@@ -186,10 +186,8 @@ describe('async', () => {
     let calls = 0;
     const fn = coalesced(async () => {
       calls++;
-      if (calls === 1) {
-        await firstCall;
-        throw error;
-      }
+      await firstCall;
+      throw error;
     });
 
     const running = fn();
@@ -197,6 +195,10 @@ describe('async', () => {
     releaseFirstCall();
 
     await expect(running).rejects.toBe(error);
+    expect(calls).toBe(1);
+
+    // The guard is released again after the failure.
+    await expect(fn()).rejects.toBe(error);
     expect(calls).toBe(2);
   });
 });

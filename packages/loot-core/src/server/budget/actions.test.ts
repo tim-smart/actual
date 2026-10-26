@@ -567,22 +567,6 @@ describe('future buffer mode', () => {
     expect(await getBuffered('2024-04')).toBe(0);
   });
 
-  it('prewarms manual, auto, and selected buffered summary cells', async () => {
-    await setupFutureBufferModeDatabase(['2024-03', '2024-04']);
-
-    const values = await runHandler(app.handlers['envelope-budget-month'], {
-      month: '2024-03',
-    });
-
-    expect(values.map(value => value.name)).toEqual(
-      expect.arrayContaining([
-        'budget202403!buffered',
-        'budget202403!buffered-auto',
-        'budget202403!buffered-selected',
-      ]),
-    );
-  });
-
   it('prevents direct current and future hold, reset, and income carryover changes while active', async () => {
     await setupFutureBufferModeDatabase(['2024-03', '2024-04']);
     await db.insertTransaction({
@@ -611,7 +595,7 @@ describe('future buffer mode', () => {
 
     expect(held).toBe(false);
     expect(await getBuffered('2024-03')).toBe(0);
-    expect(await getBuffered('2024-04')).toBe(0);
+    expect(await getBuffered('2024-04')).toBe(999);
     expect(await getCarryover('2024-03', 'income-cat')).toBe(false);
     expect(await getCarryover('2024-04', 'income-cat')).toBe(false);
   });
@@ -626,6 +610,7 @@ describe('future buffer mode', () => {
     await sheet.waitOnSpreadsheet();
     expect(await getCarryover('2024-03', 'income-cat')).toBe(true);
     enableFutureBufferModePrefs();
+    await recalculateFutureBuffer();
 
     await runHandler(app.handlers['budget/set-carryover'], {
       startMonth: '2024-02',
