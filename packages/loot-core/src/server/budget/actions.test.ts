@@ -479,6 +479,43 @@ describe('future buffer mode', () => {
     expect(await getBuffered('2024-03')).toBe(0);
   });
 
+  it('keeps the past month buffer fixed after the month rolls over', async () => {
+    await setupFutureBufferModeDatabase(['2024-03', '2024-04', '2024-05']);
+    await db.insertTransaction({
+      date: '2024-03-01',
+      amount: 100000,
+      account: 'account1',
+      category: 'income-cat',
+    });
+    await setBudget({ category: 'cat1', month: '2024-04', amount: 50000 });
+    await setBudget({ category: 'cat1', month: '2024-05', amount: 30000 });
+    await sheet.waitOnSpreadsheet();
+    enableFutureBufferModePrefs();
+    await recalculateFutureBuffer();
+    expect(await getBuffered('2024-03')).toBe(80000);
+    expect(await getBuffered('2024-04')).toBe(30000);
+
+    global.currentMonth = '2024-04';
+    // While March was managed, this edit would have raised its buffer to
+    // 90000.
+    await runHandler(app.handlers['budget/budget-amount'], {
+      category: 'cat1',
+      month: '2024-05',
+      amount: 40000,
+    });
+
+    expect(await getBuffered('2024-03')).toBe(80000);
+    expect(await getBuffered('2024-04')).toBe(40000);
+
+    const held = await runHandler(app.handlers['budget/hold-for-next-month'], {
+      month: '2024-03',
+      amount: 5000,
+    });
+
+    expect(held).toBe(true);
+    expect(await getBuffered('2024-03')).toBe(85000);
+  });
+
   it('recalculates after a representative future multi-category budget action', async () => {
     global.currentMonth = '2024-02';
     await setupAverageDatabase();
