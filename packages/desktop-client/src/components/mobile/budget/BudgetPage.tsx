@@ -722,7 +722,7 @@ function OverbudgetedBanner({ month, onBudgetAction, ...props }) {
     useSheetValue<'envelope-budget', typeof envelopeBudget.forNextMonth>(
       envelopeBudget.forNextMonth,
     ) ?? 0;
-  const { isManagedMonth } = useFutureBufferMode(month);
+  const { isManagedMonth } = useFutureBufferMode();
   const dispatch = useDispatch();
   const { showUndoNotification } = useUndo();
   const { data: { list: categories } = { list: [] } } = useCategories();
