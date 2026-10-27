@@ -229,7 +229,7 @@ app.events.on('sync', ({ type }) => {
   ) {
     syncedSpreadsheet = spreadsheet;
     void runMutator(async () => {
-      if (openFile() === file) {
+      if (openFile() === file && sheet.get() === spreadsheet) {
         await seedCarryoverChain();
       }
       if (openFile() === file && sheet.get() === spreadsheet) {
