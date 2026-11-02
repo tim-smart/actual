@@ -5,6 +5,7 @@ import { useResponsive } from '@actual-app/components/hooks/useResponsive';
 import { Input } from '@actual-app/components/input';
 import { Select } from '@actual-app/components/select';
 import { SpaceBetween } from '@actual-app/components/space-between';
+import { WEEKDAYS } from '@actual-app/core/shared/months';
 import type {
   AverageTemplate,
   CopyTemplate,
@@ -20,6 +21,7 @@ import {
   STACKED_FIELD_FLEX,
 } from '#components/budget/goals/editor/fieldLayout';
 import { FormField, FormLabel } from '#components/forms';
+import { useDaysOfWeek } from '#hooks/useDaysOfWeek';
 
 type HistoricalAutomationProps = {
   template: CopyTemplate | AverageTemplate | WeeklyAverageTemplate;
@@ -31,6 +33,7 @@ export const HistoricalAutomation = ({
   dispatch,
 }: HistoricalAutomationProps) => {
   const { t } = useTranslation();
+  const daysOfWeek = useDaysOfWeek();
   const { isNarrowWidth } = useResponsive();
   const fieldFlex = isNarrowWidth ? STACKED_FIELD_FLEX : 1;
 
@@ -107,15 +110,10 @@ export const HistoricalAutomation = ({
             <FormLabel title={t('Once every')} htmlFor="weekday-field" />
             <Select
               id="weekday-field"
-              options={[
-                ['monday', t('Monday')],
-                ['tuesday', t('Tuesday')],
-                ['wednesday', t('Wednesday')],
-                ['thursday', t('Thursday')],
-                ['friday', t('Friday')],
-                ['saturday', t('Saturday')],
-                ['sunday', t('Sunday')],
-              ]}
+              options={WEEKDAYS.map(
+                (weekday, dayOfWeek) =>
+                  [weekday, daysOfWeek[dayOfWeek]] as const,
+              )}
               value={template.weekday}
               onChange={weekday =>
                 dispatch(updateTemplate({ type: 'weeklyAverage', weekday }))
