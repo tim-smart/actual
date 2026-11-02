@@ -32,6 +32,13 @@ export function AmountAdjustmentSummary({
       amountToInteger(magnitude, format.currency.decimalPlaces),
       'financial',
     );
+    if (template.type === 'weeklyAverage') {
+      return increase ? (
+        <Trans>(increased by {{ amount }} per week)</Trans>
+      ) : (
+        <Trans>(decreased by {{ amount }} per week)</Trans>
+      );
+    }
     return increase ? (
       <Trans>(increased by {{ amount }})</Trans>
     ) : (
