@@ -23,6 +23,10 @@ import {
 import { FormField, FormLabel } from '#components/forms';
 import { useDaysOfWeek } from '#hooks/useDaysOfWeek';
 
+// The dropdown lists Monday first; `WEEKDAYS` itself is Sunday first to match
+// `Date.getDay()`.
+const WEEKDAY_OPTION_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
 type HistoricalAutomationProps = {
   template: CopyTemplate | AverageTemplate | WeeklyAverageTemplate;
   dispatch: (action: Action) => void;
@@ -110,9 +114,9 @@ export const HistoricalAutomation = ({
             <FormLabel title={t('Once every')} htmlFor="weekday-field" />
             <Select
               id="weekday-field"
-              options={WEEKDAYS.map(
-                (weekday, dayOfWeek) =>
-                  [weekday, daysOfWeek[dayOfWeek]] as const,
+              options={WEEKDAY_OPTION_ORDER.map(
+                dayOfWeek =>
+                  [WEEKDAYS[dayOfWeek], daysOfWeek[dayOfWeek]] as const,
               )}
               value={template.weekday}
               onChange={weekday =>
