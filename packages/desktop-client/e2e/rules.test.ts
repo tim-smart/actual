@@ -143,6 +143,6 @@ test.describe('Rules', () => {
     await rulesPage.rightClickNthRule(0);
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Edit' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
   });
 });

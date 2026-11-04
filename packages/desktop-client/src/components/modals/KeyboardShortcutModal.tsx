@@ -165,7 +165,7 @@ export function KeyboardShortcutModal() {
           {
             id: 'help',
             shortcut: '?',
-            description: t('Open the help menu'),
+            description: t('Open the account and help menu'),
           },
           {
             id: 'command-palette',
@@ -233,6 +233,18 @@ export function KeyboardShortcutModal() {
             id: 'view-next-month',
             shortcut: '→',
             description: t('View next month'),
+          },
+          {
+            id: 'view-previous-year',
+            shortcut: '←',
+            shift: true,
+            description: t('View a year earlier'),
+          },
+          {
+            id: 'view-next-year',
+            shortcut: '→',
+            shift: true,
+            description: t('View a year later'),
           },
           ...(isGoalTemplatesEnabled
             ? [

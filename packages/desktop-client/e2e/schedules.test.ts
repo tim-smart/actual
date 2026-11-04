@@ -270,6 +270,8 @@ test.describe('Schedules', () => {
     await schedulesPage.rightClickNthSchedule(2);
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Complete' })).toBeVisible();
+    await expect(
+      menu.getByRole('menuitem', { name: 'Complete' }),
+    ).toBeVisible();
   });
 });

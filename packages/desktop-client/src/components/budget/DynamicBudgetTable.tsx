@@ -8,31 +8,36 @@ import { View } from '@actual-app/components/view';
 import * as monthUtils from '@actual-app/core/shared/months';
 
 import { FeatureErrorFallback } from '#components/FeatureErrorFallback';
+import { CellPaddingContext } from '#components/table';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFormat } from '#hooks/useFormat';
 import { useGlobalPref } from '#hooks/useGlobalPref';
+import { useLanguage } from '#hooks/useLocale';
 
+import {
+  fitCategoryColumnWidth,
+  getCellPadding,
+  getNumPossibleMonths,
+  HEADER_FONTS,
+  WIDEST_AMOUNT,
+} from './budgetHeaderLayout';
 import { useBudgetMonthCount } from './BudgetMonthCountContext';
-import { BudgetPageHeader } from './BudgetPageHeader';
 import { BudgetTable } from './BudgetTable';
+import { CategoryColumnWidthContext } from './CategoryColumnWidth';
+import { measureText, useFontsVersion } from './measureText';
 import { clampMonth } from './MonthsContext';
+import type { MonthBounds } from './MonthsContext';
+import { SummaryNeedsProvider, useSummaryLayout } from './useSummaryLayout';
+import { getCategoryColumnWidth, getScrollbarWidth } from './util';
 
-function getNumPossibleMonths(width: number, categoryWidth: number) {
-  const estimatedTableWidth = width - categoryWidth;
+import { useBudgetComponents } from '.';
 
-  if (estimatedTableWidth < 500) {
-    return 1;
-  } else if (estimatedTableWidth < 750) {
-    return 2;
-  } else if (estimatedTableWidth < 1000) {
-    return 3;
-  } else if (estimatedTableWidth < 1250) {
-    return 4;
-  } else if (estimatedTableWidth < 1500) {
-    return 5;
-  }
-
-  return 6;
-}
+/**
+ * Below this column width the month heading hands its notes and menu
+ * buttons to the summary beneath it, so the heading and the step button
+ * never fight for the same pixels.
+ */
+const COMPACT_MONTH_COLUMN_WIDTH = 200;
 
 type DynamicBudgetTableProps = {
   width: number;
@@ -56,12 +61,40 @@ const DynamicBudgetTable = ({
   const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
   const categoryExpandedState = categoryExpandedStatePref ?? 0;
 
-  const numPossible = getNumPossibleMonths(
-    width,
-    200 + 100 * categoryExpandedState,
+  const preferredCategoryWidth = getCategoryColumnWidth(categoryExpandedState);
+  // The table keeps a 5px margin on each side; see BudgetTable.
+  const tableChrome = 10 + getScrollbarWidth();
+  // An expanded category column narrows to make room (see
+  // fitCategoryColumnWidth), so it never costs a month on its own.
+  // The widest amount as this budget formats it, so the columns are sized
+  // from what they display rather than from a guess.
+  const format = useFormat();
+  useFontsVersion();
+  const amountWidth = measureText(
+    format(WIDEST_AMOUNT, 'financial'),
+    HEADER_FONTS.tableTotal,
   );
+  const numPossible = getNumPossibleMonths(width - tableChrome, amountWidth);
   const numMonths = Math.min(numPossible, maxMonths);
-  const maxWidth = 200 + 100 * categoryExpandedState + 500 * numMonths;
+  const maxWidth = preferredCategoryWidth + 500 * numMonths;
+  const tableWidth = Math.min(width, maxWidth) - tableChrome;
+  const categoryWidth = fitCategoryColumnWidth({
+    preferred: preferredCategoryWidth,
+    tableWidth,
+    numMonths,
+    amountWidth,
+  });
+  const monthColumnWidth = (tableWidth - categoryWidth) / numMonths;
+  const cellPadding = getCellPadding(monthColumnWidth, amountWidth);
+  const compactMonthHeader = monthColumnWidth < COMPACT_MONTH_COLUMN_WIDTH;
+  const language = useLanguage();
+  // The envelope figure's notes sit beside it where they fit; the
+  // tracking figure's ledger sits under it at every width
+  const { summaryLayout, reportSummaryNeeds } = useSummaryLayout(
+    monthColumnWidth,
+    `${language}:${type}`,
+    type === 'tracking' ? 'ledger' : 'notes',
+  );
 
   // Every displayed column must stay inside the bounds, so the first
   // column can go no later than `numMonths - 1` months before the end.
@@ -96,19 +129,44 @@ const DynamicBudgetTable = ({
     setDisplayMax(numPossible);
   }, [setDisplayMax, numPossible]);
 
+  // When the window narrows and drops months off the end, bring the
+  // current month back if it was on screen, as Today would show it.
+  const prevNumMonths = useRef(numMonths);
+  useEffect(() => {
+    const prev = prevNumMonths.current;
+    prevNumMonths.current = numMonths;
+    if (numMonths >= prev) {
+      return;
+    }
+    const current = monthUtils.currentMonth();
+    const isShown = (count: number) =>
+      current >= startMonth &&
+      current <= monthUtils.addMonths(startMonth, count - 1);
+    if (isShown(prev) && !isShown(numMonths)) {
+      onJumpToToday();
+    }
+  });
+
   function _onMonthSelect(month) {
     onMonthSelect(getValidMonth(month), numMonths);
   }
 
+  // The arrow keys move the months shown, unless a popup (the month grid,
+  // a menu) has them: there they move within it, and the table behind it
+  // must hold still
+  const stepKeyOptions = {
+    preventDefault: true,
+    scopes: ['app'],
+    ignoreEventWhen: (e: KeyboardEvent) =>
+      e.target instanceof Element &&
+      !!e.target.closest('[role="dialog"], [role="menu"], [role="listbox"]'),
+  };
   useHotkeys(
     'left',
     () => {
       _onMonthSelect(monthUtils.prevMonth(startMonth));
     },
-    {
-      preventDefault: true,
-      scopes: ['app'],
-    },
+    stepKeyOptions,
     [_onMonthSelect, startMonth],
   );
   useHotkeys(
@@ -116,26 +174,35 @@ const DynamicBudgetTable = ({
     () => {
       _onMonthSelect(monthUtils.nextMonth(startMonth));
     },
-    {
-      preventDefault: true,
-      scopes: ['app'],
+    stepKeyOptions,
+    [_onMonthSelect, startMonth],
+  );
+  // A year at a time with Shift, so a distant month is a few keys away
+  useHotkeys(
+    'shift+left',
+    () => {
+      _onMonthSelect(monthUtils.subMonths(startMonth, 12));
     },
+    stepKeyOptions,
     [_onMonthSelect, startMonth],
   );
   useHotkeys(
-    '0',
+    'shift+right',
     () => {
-      _onMonthSelect(
-        monthUtils.subMonths(
-          monthUtils.currentMonth(),
-          type === 'envelope'
-            ? Math.floor((numMonths - 1) / 2)
-            : numMonths === 2
-              ? 1
-              : Math.max(numMonths - 2, 0),
-        ),
-      );
+      _onMonthSelect(monthUtils.addMonths(startMonth, 12));
     },
+    stepKeyOptions,
+    [_onMonthSelect, startMonth],
+  );
+  // Today puts the current month in the first column, the months after
+  // it beside it: the place to budget from is the month under way
+  function onJumpToToday() {
+    _onMonthSelect(monthUtils.currentMonth());
+  }
+
+  useHotkeys(
+    '0',
+    onJumpToToday,
     {
       preventDefault: true,
       scopes: ['app'],
@@ -166,21 +233,26 @@ const DynamicBudgetTable = ({
     >
       <View style={{ width: '100%', maxWidth }}>
         <ErrorBoundary FallbackComponent={FeatureErrorFallback}>
-          <BudgetPageHeader
-            startMonth={prewarmStartMonth}
-            numMonths={numMonths}
-            monthBounds={monthBounds}
-            onMonthSelect={_onMonthSelect}
-          />
-          <BudgetTable
-            type={type}
-            prewarmStartMonth={prewarmStartMonth}
-            startMonth={startMonth}
-            numMonths={numMonths}
-            monthBounds={monthBounds}
-            onBudgetAction={onBudgetAction}
-            {...props}
-          />
+          <CategoryColumnWidthContext.Provider value={categoryWidth}>
+            <CellPaddingContext.Provider value={cellPadding}>
+              <SummaryNeedsProvider value={reportSummaryNeeds}>
+                <SummaryNeedsCollector monthBounds={monthBounds} />
+                <BudgetTable
+                  type={type}
+                  prewarmStartMonth={prewarmStartMonth}
+                  startMonth={startMonth}
+                  numMonths={numMonths}
+                  monthBounds={monthBounds}
+                  onBudgetAction={onBudgetAction}
+                  onJumpToToday={onJumpToToday}
+                  onSelectMonth={_onMonthSelect}
+                  compactMonthHeader={compactMonthHeader}
+                  summaryLayout={summaryLayout}
+                  {...props}
+                />
+              </SummaryNeedsProvider>
+            </CellPaddingContext.Provider>
+          </CategoryColumnWidthContext.Provider>
         </ErrorBoundary>
       </View>
     </View>
@@ -189,9 +261,24 @@ const DynamicBudgetTable = ({
 
 DynamicBudgetTable.displayName = 'DynamicBudgetTable';
 
+/**
+ * Has every month in the budget report what its summary shows, so the
+ * summary layout suits them all before any is stepped to.
+ */
+function SummaryNeedsCollector({ monthBounds }: { monthBounds: MonthBounds }) {
+  const { SummaryNeedsComponent } = useBudgetComponents();
+  return monthUtils
+    .rangeInclusive(monthBounds.start, monthBounds.end)
+    .map(month => <SummaryNeedsComponent key={month} month={month} />);
+}
+
 type AutoSizingBudgetTableProps = Omit<
   ComponentProps<typeof BudgetTable>,
-  'numMonths'
+  | 'numMonths'
+  | 'onJumpToToday'
+  | 'onSelectMonth'
+  | 'compactMonthHeader'
+  | 'summaryLayout'
 > & {
   maxMonths: number;
   onMonthSelect: (month: string, numMonths: number) => void;
