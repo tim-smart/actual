@@ -154,8 +154,11 @@ export class Navigation {
     return accountPage;
   }
 
+  /** Opens the account menu, which holds the server actions. */
   async clickOnNoServer() {
-    await this.page.getByRole('button', { name: 'No server' }).click();
+    await this.page
+      .getByRole('button', { name: /account and app menu/i })
+      .click();
   }
 
   async rightClickAccount(accountName: string) {

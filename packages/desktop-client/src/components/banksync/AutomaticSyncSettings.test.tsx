@@ -36,7 +36,7 @@ const numberField = () => screen.getByLabelText('every');
 async function chooseOption(trigger: HTMLElement, label: string) {
   await userEvent.click(trigger);
   const menu = await screen.findByRole('menu');
-  await userEvent.click(within(menu).getByRole('button', { name: label }));
+  await userEvent.click(within(menu).getByRole('menuitem', { name: label }));
 }
 
 describe('AutomaticSyncSettings', () => {

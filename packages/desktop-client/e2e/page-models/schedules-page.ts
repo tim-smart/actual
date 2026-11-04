@@ -70,7 +70,7 @@ export class SchedulesPage {
     const actions = row.getByTestId('actions');
 
     await actions.getByRole('button').click();
-    await this.page.getByRole('button', { name: actionName }).click();
+    await this.page.getByRole('menuitem', { name: actionName }).click();
   }
 
   async rightClickNthSchedule(index: number) {

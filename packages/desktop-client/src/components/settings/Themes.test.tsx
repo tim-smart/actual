@@ -112,9 +112,8 @@ describe('ThemeSettings', () => {
       // is opened. Click it to reveal the menu.
       const select = screen.getByRole('button', { name: 'Light' });
       await user.click(select);
-      // The Select component renders menu items as buttons (not options).
-      // After opening, "Dark" appears as a button in the popover.
-      const darkOption = await screen.findByRole('button', { name: 'Dark' });
+      // After opening, "Dark" appears as a menu item in the popover.
+      const darkOption = await screen.findByRole('menuitem', { name: 'Dark' });
       await user.click(darkOption);
 
       expect(mockSetOverride).not.toHaveBeenCalled();

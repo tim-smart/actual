@@ -90,7 +90,7 @@ test.describe('Settings', () => {
     }).toPass({ timeout: 15000 });
     await page.getByRole('button', { name: 'Light', exact: true }).click();
     await page
-      .getByRole('button', { name: 'Custom theme', exact: true })
+      .getByRole('menuitem', { name: 'Custom theme', exact: true })
       .click();
     await page.getByRole('button', { name: 'Test theme', exact: true }).click();
     const css = ':root { --color-pageBackground: #abcdef; }';
@@ -106,7 +106,9 @@ test.describe('Settings', () => {
       await page
         .getByRole('button', { name: currentTheme, exact: true })
         .click();
-      await page.getByRole('button', { name: nextTheme, exact: true }).click();
+      await page
+        .getByRole('menuitem', { name: nextTheme, exact: true })
+        .click();
       await expect(indicator).toBeVisible();
       await expect
         .poll(() =>

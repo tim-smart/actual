@@ -23,7 +23,14 @@ type NotesButtonProps = {
   defaultColor?: string;
   tooltipPosition?: ComponentProps<typeof Tooltip>['placement'];
   showPlaceholder?: boolean;
+  /** Accessible name; defaults to "View notes". */
+  label?: string;
+  className?: string;
   style?: CSSProperties;
+  /** Open the editor as soon as the button appears. */
+  defaultOpen?: boolean;
+  /** Called when the editor closes, with the note as it was left. */
+  onClose?: (note: string) => void;
 };
 export function NotesButton({
   id,
@@ -32,11 +39,15 @@ export function NotesButton({
   defaultColor = theme.buttonNormalText,
   tooltipPosition = 'bottom start',
   showPlaceholder = false,
+  label,
+  className,
   style,
+  defaultOpen = false,
+  onClose,
 }: NotesButtonProps) {
   const { t } = useTranslation();
   const triggerRef = useRef(null);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(defaultOpen);
   const note = useNotes(id) || '';
   const hasNotes = note && note !== '';
 
@@ -52,9 +63,10 @@ export function NotesButton({
           void send('notes-save', { id, note: tempNotes });
         }
         setIsOpen(false);
+        onClose?.(tempNotes);
       }
     },
-    [id, note, tempNotes],
+    [id, note, tempNotes, onClose],
   );
 
   return (
@@ -69,7 +81,7 @@ export function NotesButton({
         <Button
           ref={triggerRef}
           variant="bare"
-          aria-label={t('View notes')}
+          aria-label={label ?? t('View notes')}
           className={cx(
             css({
               color: defaultColor,
@@ -82,6 +94,7 @@ export function NotesButton({
               '&:hover': { opacity: 1 },
             }),
             !hasNotes && !isOpen && !showPlaceholder ? 'hover-visible' : '',
+            className,
           )}
           data-placeholder={showPlaceholder}
           onPress={() => {

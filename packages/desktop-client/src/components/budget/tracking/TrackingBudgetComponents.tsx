@@ -1,6 +1,6 @@
 // @ts-strict-ignore
-import React, { memo, useRef, useState } from 'react';
-import type { ComponentProps, CSSProperties } from 'react';
+import React, { memo, useContext, useRef, useState } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { Trans } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
@@ -19,11 +19,13 @@ import { css } from '@emotion/css';
 import { t } from 'i18next';
 
 import { BalanceWithCarryover } from '#components/budget/BalanceWithCarryover';
+import { budgetedColumnFlex } from '#components/budget/budgetHeaderLayout';
+import { BUDGET_TOTALS_ROW_HEIGHT } from '#components/budget/BudgetTotals';
 import { GoalStatus } from '#components/budget/GoalStatus';
 import { makeAmountGrey } from '#components/budget/util';
 import { NotesButton } from '#components/NotesButton';
 import { CellValue, CellValueText } from '#components/spreadsheet/CellValue';
-import { Field, SheetCell } from '#components/table';
+import { CellPaddingContext, Field, SheetCell } from '#components/table';
 import type { SheetCellProps } from '#components/table';
 import { useCategoryScheduleGoalTemplateIndicator } from '#hooks/useCategoryScheduleGoalTemplateIndicator';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
@@ -60,13 +62,59 @@ const TrackingSheetCell = <FieldName extends SheetFields<'tracking-budget'>>(
 
 const headerLabelStyle: CSSProperties = {
   flex: 1,
-  padding: '0 5px',
   textAlign: 'right',
 };
 
-const cellStyle: CSSProperties = {
+/**
+ * A totals cell: its label over its total, right-aligned. Like the
+ * table's cells under it, the flex item has no padding of its own; the
+ * padding is on the content inside it, so the three columns split the
+ * month's width exactly as the rows' cells do, and each total sits over
+ * the amounts under it.
+ */
+function TotalCell({
+  style,
+  children,
+}: {
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  const cellPadding = useContext(CellPaddingContext);
+  return (
+    <View style={{ flex: 1, minWidth: 0, ...style }}>
+      <View
+        style={{
+          flex: 1,
+          minWidth: 0,
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          gap: 1,
+          padding: `0 ${cellPadding}px`,
+        }}
+      >
+        {children}
+      </View>
+    </View>
+  );
+}
+
+const totalLabelStyle: CSSProperties = {
+  maxWidth: '100%',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
   color: theme.tableHeaderText,
+  fontSize: 12,
+  lineHeight: '15px',
+};
+
+const totalValueStyle: CSSProperties = {
+  maxWidth: '100%',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  color: theme.pageText,
   fontWeight: 600,
+  lineHeight: '18px',
 };
 
 export const BudgetTotalsMonth = memo(function BudgetTotalsMonth() {
@@ -75,46 +123,46 @@ export const BudgetTotalsMonth = memo(function BudgetTotalsMonth() {
       style={{
         flex: 1,
         flexDirection: 'row',
-        marginRight: styles.monthRightPadding,
-        paddingTop: 10,
-        paddingBottom: 10,
+        alignItems: 'stretch',
+        height: BUDGET_TOTALS_ROW_HEIGHT,
       }}
     >
-      <View style={headerLabelStyle}>
-        <Text style={{ color: theme.tableHeaderText }}>
+      <TotalCell style={budgetedColumnFlex}>
+        <Text style={totalLabelStyle}>
           <Trans>Budgeted</Trans>
         </Text>
         <TrackingCellValue
           binding={trackingBudget.totalBudgetedExpense}
           type="financial"
         >
-          {props => <CellValueText {...props} style={cellStyle} />}
+          {props => <CellValueText {...props} style={totalValueStyle} />}
         </TrackingCellValue>
-      </View>
-      <View style={headerLabelStyle}>
-        <Text style={{ color: theme.tableHeaderText }}>
+      </TotalCell>
+      <TotalCell>
+        <Text style={totalLabelStyle}>
           <Trans>Spent</Trans>
         </Text>
         <TrackingCellValue binding={trackingBudget.totalSpent} type="financial">
-          {props => <CellValueText {...props} style={cellStyle} />}
+          {props => <CellValueText {...props} style={totalValueStyle} />}
         </TrackingCellValue>
-      </View>
-      <View style={headerLabelStyle}>
-        <Text style={{ color: theme.tableHeaderText }}>
+      </TotalCell>
+      <TotalCell style={{ paddingRight: styles.monthRightPadding }}>
+        <Text style={totalLabelStyle}>
           <Trans>Balance</Trans>
         </Text>
         <TrackingCellValue
           binding={trackingBudget.totalLeftover}
           type="financial"
         >
-          {props => <CellValueText {...props} style={cellStyle} />}
+          {props => <CellValueText {...props} style={totalValueStyle} />}
         </TrackingCellValue>
-      </View>
+      </TotalCell>
     </View>
   );
 });
 
 export function IncomeHeaderMonth() {
+  const padding = `0 ${useContext(CellPaddingContext)}px`;
   return (
     <View
       style={{
@@ -123,12 +171,12 @@ export function IncomeHeaderMonth() {
         paddingBottom: 5,
       }}
     >
-      <View style={headerLabelStyle}>
+      <View style={{ ...headerLabelStyle, padding, ...budgetedColumnFlex }}>
         <Text style={{ color: theme.tableHeaderText }}>
           <Trans>Budgeted</Trans>
         </Text>
       </View>
-      <View style={headerLabelStyle}>
+      <View style={{ ...headerLabelStyle, padding }}>
         <Text style={{ color: theme.tableHeaderText }}>
           <Trans>Received</Trans>
         </Text>
@@ -157,7 +205,7 @@ export const GroupMonth = memo(function GroupMonth({
         name="budgeted"
         width="flex"
         textAlign="right"
-        style={{ fontWeight: 600, ...styles.tnum }}
+        style={{ fontWeight: 600, ...budgetedColumnFlex, ...styles.tnum }}
         valueProps={{
           binding: trackingBudget.groupBudgeted(id),
           type: 'financial',
@@ -201,6 +249,7 @@ export const CategoryMonth = memo(function CategoryMonth({
   onBudgetAction,
   onShowActivity,
 }: CategoryMonthProps) {
+  const cellPadding = useContext(CellPaddingContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef(null);
   const format = useFormat();
@@ -261,7 +310,7 @@ export const CategoryMonth = memo(function CategoryMonth({
     >
       <View
         style={{
-          flex: 1,
+          ...budgetedColumnFlex,
           flexDirection: 'row',
         }}
       >
@@ -376,7 +425,8 @@ export const CategoryMonth = memo(function CategoryMonth({
           valueStyle={{
             cursor: 'default',
             margin: 1,
-            padding: '0 4px',
+            // With the 1px margin, as far from the edge as other cells
+            padding: `0 ${cellPadding - 1}px`,
             borderRadius: 4,
             ':hover': {
               boxShadow: 'inset 0 0 0 1px ' + theme.pageTextSubdued,
@@ -541,7 +591,8 @@ export const CategoryMonth = memo(function CategoryMonth({
   );
 });
 
-export { BudgetSummary } from './budgetsummary/BudgetSummary';
+export { BudgetSummary, SummaryNeeds } from './budgetsummary/BudgetSummary';
+export { MonthHeader } from './budgetsummary/MonthHeader';
 
 export const ExpenseGroupMonth = GroupMonth;
 export const ExpenseCategoryMonth = CategoryMonth;

@@ -17,8 +17,18 @@ import { useGlobalPref } from '#hooks/useGlobalPref';
 import { useLocalPref } from '#hooks/useLocalPref';
 
 import { BudgetCategories } from './BudgetCategories';
+import type { SummaryLayout } from './budgetHeaderLayout';
+import {
+  CORNER_CONTROLS_MAX_WIDTH,
+  CORNER_PADDING_LEFT,
+  CORNER_ROW_GAP,
+  getSummaryHeight,
+  HEADER_CONTROL_GAP,
+} from './budgetHeaderLayout';
+import { BudgetPageHeader } from './BudgetPageHeader';
 import { BudgetSummaries } from './BudgetSummaries';
 import { BudgetTotals } from './BudgetTotals';
+import { MonthCountSelector } from './MonthCountSelector';
 import { MonthsProvider } from './MonthsContext';
 import type { MonthBounds } from './MonthsContext';
 import {
@@ -56,6 +66,10 @@ type BudgetTableProps = {
   }) => void;
   onShowActivity: (id: CategoryEntity['id'], month?: string) => void;
   onBudgetAction: (month: string, type: string, args: unknown) => void;
+  onJumpToToday: () => void;
+  onSelectMonth: (month: string) => void;
+  compactMonthHeader: boolean;
+  summaryLayout: SummaryLayout;
 };
 
 export function BudgetTable(props: BudgetTableProps) {
@@ -75,6 +89,10 @@ export function BudgetTable(props: BudgetTableProps) {
     onReorderGroup,
     onShowActivity,
     onBudgetAction,
+    onJumpToToday,
+    onSelectMonth,
+    compactMonthHeader,
+    summaryLayout,
   } = props;
 
   const { data: { grouped: categoryGroups } = { grouped: [] } } =
@@ -84,14 +102,30 @@ export function BudgetTable(props: BudgetTableProps) {
   const [showHiddenCategories, setShowHiddenCategoriesPef] = useLocalPref(
     'budget.showHiddenCategories',
   );
-  const [categoryExpandedStatePref] = useGlobalPref('categoryExpandedState');
-  const categoryExpandedState = categoryExpandedStatePref ?? 0;
+  const [maxMonthsPref, setMaxMonthsPref] = useGlobalPref('maxMonths');
   const [editing, setEditing] = useState<{ id: string; cell: string } | null>(
     null,
   );
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // The header and totals stop where the table's columns do: short of
+  // the scrollbar gutter, at whatever width this browser draws it.
+  const [scrollbarGutter, setScrollbarGutter] = useState(getScrollbarWidth);
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) {
+      return;
+    }
+    const measure = () => setScrollbarGutter(el.offsetWidth - el.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // The header has a fixed height, so the saved position is valid
+  // as soon as the table mounts.
   useLayoutEffect(() => {
     const savedScrollPosition = sessionStorage.getItem(
       'budget-scroll-position',
@@ -261,27 +295,51 @@ export function BudgetTable(props: BudgetTableProps) {
         }),
       }}
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          overflow: 'hidden',
-          flexShrink: 0,
-          // This is necessary to align with the table because the
-          // table has this padding to allow the shadow to show
-          paddingLeft: 5,
-          paddingRight: 5 + getScrollbarWidth(),
-        }}
+      <BudgetPageHeader
+        startMonth={prewarmStartMonth}
+        numMonths={numMonths}
+        monthBounds={monthBounds}
+        compactMonthHeader={compactMonthHeader}
+        scrollbarGutter={scrollbarGutter}
+        onMonthSelect={onSelectMonth}
+        onJumpToToday={onJumpToToday}
+        cornerControls={
+          <View
+            style={{
+              // The row under the pager: how many months are shown. It
+              // is as wide as the pager's row, with the same padding
+              // either side, so the corner reads as one block, and its
+              // width never changes while stepping.
+              maxWidth: CORNER_CONTROLS_MAX_WIDTH,
+              padding: `${CORNER_ROW_GAP}px ${HEADER_CONTROL_GAP}px 0 ${CORNER_PADDING_LEFT}px`,
+            }}
+          >
+            <MonthCountSelector
+              maxMonths={maxMonthsPref || 1}
+              onChange={value => setMaxMonthsPref(value)}
+            />
+          </View>
+        }
       >
-        <View style={{ width: 200 + 100 * categoryExpandedState }} />
-        <MonthsProvider
-          startMonth={prewarmStartMonth}
-          numMonths={numMonths}
-          monthBounds={monthBounds}
-          type={type}
+        <View
+          style={{
+            flexDirection: 'row',
+            overflow: 'hidden',
+            height: getSummaryHeight(summaryLayout, compactMonthHeader),
+          }}
         >
-          <BudgetSummaries />
-        </MonthsProvider>
-      </View>
+          <MonthsProvider
+            startMonth={prewarmStartMonth}
+            numMonths={numMonths}
+            monthBounds={monthBounds}
+            type={type}
+            compactHeader={compactMonthHeader}
+            summaryLayout={summaryLayout}
+          >
+            <BudgetSummaries />
+          </MonthsProvider>
+        </View>
+      </BudgetPageHeader>
 
       <MonthsProvider
         startMonth={startMonth}
@@ -290,6 +348,7 @@ export function BudgetTable(props: BudgetTableProps) {
         type={type}
       >
         <BudgetTotals
+          scrollbarGutter={scrollbarGutter}
           toggleHiddenCategories={toggleHiddenCategories}
           expandAllCategories={expandAllCategories}
           collapseAllCategories={collapseAllCategories}
@@ -301,8 +360,10 @@ export function BudgetTable(props: BudgetTableProps) {
             overflowY: 'scroll',
             overflowAnchor: 'none',
             flex: 1,
-            paddingLeft: 5,
-            paddingRight: 5,
+            marginLeft: 5,
+            marginRight: 5,
+            backgroundColor: theme.tableBackground,
+            borderRadius: '0 0 6px 6px',
           }}
         >
           <View

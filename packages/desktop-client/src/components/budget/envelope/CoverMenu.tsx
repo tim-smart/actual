@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { Form } from 'react-aria-components';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -37,6 +37,7 @@ export function CoverMenu({
   onClose,
 }: CoverMenuProps) {
   const { t } = useTranslation();
+  const amountId = useId();
 
   const { data: { grouped: originalCategoryGroups } = { grouped: [] } } =
     useCategories();
@@ -72,11 +73,12 @@ export function CoverMenu({
       }}
     >
       <View style={{ padding: 10 }}>
-        <View style={{ marginBottom: 5 }}>
+        <label htmlFor={amountId} style={{ display: 'block', marginBottom: 5 }}>
           <Trans>Cover this amount:</Trans>
-        </View>
+        </label>
         <View>
           <Input
+            id={amountId}
             defaultValue={_initialAmount}
             onUpdate={setAmount}
             onChangeValue={setAmount}
