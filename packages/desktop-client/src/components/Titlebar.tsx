@@ -1,5 +1,4 @@
 import React from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
 import { Trans, useTranslation } from 'react-i18next';
 import { Route, Routes, useLocation } from 'react-router';
 
@@ -9,257 +8,116 @@ import { SvgArrowLeft } from '@actual-app/components/icons/v1';
 import {
   SvgAlertTriangle,
   SvgNavigationMenu,
-  SvgViewHide,
-  SvgViewShow,
 } from '@actual-app/components/icons/v2';
 import { SpaceBetween } from '@actual-app/components/space-between';
 import type { CSSProperties } from '@actual-app/components/styles';
-import { styles } from '@actual-app/components/styles';
-import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { Tooltip } from '@actual-app/components/tooltip';
 import { View } from '@actual-app/components/view';
 import { isDevelopmentEnvironment } from '@actual-app/core/shared/environment';
 import * as Platform from '@actual-app/core/shared/platform';
-import { css } from '@emotion/css';
+import { css, cx } from '@emotion/css';
 
-import { sync } from '#app/appSlice';
+import { headerControlClass } from '#components/budget/headerStyles';
+import { FinancialText } from '#components/FinancialText';
 import { SharedArrayBufferWarning } from '#components/SharedArrayBufferWarning';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 import { useIsTestEnv } from '#hooks/useIsTestEnv';
 import { useNavigate } from '#hooks/useNavigate';
 import { useSheetValue } from '#hooks/useSheetValue';
-import { useSyncedPref } from '#hooks/useSyncedPref';
-import { useSyncStatus } from '#hooks/useSyncStatus';
-import { useDispatch } from '#redux';
 import * as bindings from '#spreadsheet/bindings';
 
+import { AccountMenu } from './AccountMenu';
 import { AccountSyncCheck } from './accounts/AccountSyncCheck';
-import { AnimatedRefresh } from './AnimatedRefresh';
-import { MonthCountSelector } from './budget/MonthCountSelector';
 import { Link } from './common/Link';
-import { HelpMenu } from './HelpMenu';
-import { LoggedInUser } from './LoggedInUser';
-import { NotificationsButton } from './news/NotificationsButton';
-import { useServerURL } from './ServerContext';
 import { useSidebar } from './sidebar/SidebarProvider';
 import { ThemeSelector } from './ThemeSelector';
+import { useTitlebarLayout } from './TitlebarLayout';
 
-function UncategorizedButton() {
+/**
+ * The link to the uncategorized transactions, red because they want
+ * attention. On the budget header's heading row it is a compact control
+ * of the header's own family, a warning sign and the count, so it can
+ * never push into the month heading beside it; the full sentence is its
+ * name and tooltip.
+ */
+function UncategorizedButton({ compact }: { compact: boolean }) {
+  const { t } = useTranslation();
   const count: number | null = useSheetValue(bindings.uncategorizedCount());
   if (count === null || count <= 0) {
     return null;
   }
-
-  return (
-    <Link
-      variant="button"
-      buttonVariant="bare"
-      to="/categories/uncategorized"
-      style={{
-        color: theme.errorText,
-      }}
-    >
-      <Trans count={count}>{{ count }} uncategorized transactions</Trans>
-    </Link>
-  );
-}
-
-type PrivacyButtonProps = {
-  style?: CSSProperties;
-};
-
-function PrivacyButton({ style }: PrivacyButtonProps) {
-  const { t } = useTranslation();
-  const [isPrivacyEnabledPref, setPrivacyEnabledPref] =
-    useSyncedPref('isPrivacyEnabled');
-  const isPrivacyEnabled = String(isPrivacyEnabledPref) === 'true';
-
-  const privacyIconStyle = { width: 15, height: 15 };
-
-  useHotkeys(
-    'shift+ctrl+p, shift+cmd+p, shift+meta+p',
-    () => {
-      setPrivacyEnabledPref(String(!isPrivacyEnabled));
-    },
-    {
-      preventDefault: true,
-      scopes: ['app'],
-    },
-    [setPrivacyEnabledPref, isPrivacyEnabled],
-  );
-
+  if (!compact) {
+    return (
+      <Link
+        variant="button"
+        buttonVariant="bare"
+        to="/categories/uncategorized"
+        style={{
+          color: theme.errorText,
+        }}
+      >
+        <Trans count={count}>{{ count }} uncategorized transactions</Trans>
+      </Link>
+    );
+  }
+  const sentence = t('{{count}} uncategorized transactions', { count });
   return (
     <Tooltip
       placement="bottom end"
       content={
-        isPrivacyEnabled ? (
-          <Trans>Disable privacy mode</Trans>
-        ) : (
-          <Trans>Enable privacy mode</Trans>
-        )
+        <View style={{ gap: 4 }}>
+          <View style={{ fontWeight: 600 }}>{sentence}</View>
+          <View>
+            <Trans>Click to give them categories.</Trans>
+          </View>
+        </View>
       }
     >
-      <Button
-        variant="bare"
-        aria-label={
-          isPrivacyEnabled
-            ? t('Disable privacy mode')
-            : t('Enable privacy mode')
-        }
-        onPress={() => setPrivacyEnabledPref(String(!isPrivacyEnabled))}
-        style={style}
-      >
-        {isPrivacyEnabled ? (
-          <SvgViewHide style={privacyIconStyle} />
-        ) : (
-          <SvgViewShow style={privacyIconStyle} />
+      <Link
+        variant="button"
+        buttonVariant="bare"
+        to="/categories/uncategorized"
+        aria-label={sentence}
+        className={cx(
+          headerControlClass,
+          css({
+            gap: 4,
+            padding: '0 8px 0 7px',
+            color: theme.errorText,
+            '&[data-hovered]': { color: theme.errorText },
+            '&[data-pressed]': { color: theme.errorText },
+          }),
         )}
-      </Button>
+      >
+        <SvgAlertTriangle
+          aria-hidden
+          style={{ width: 12, height: 12, flexShrink: 0 }}
+        />
+        <FinancialText style={{ fontWeight: 600 }}>{count}</FinancialText>
+      </Link>
     </Tooltip>
   );
 }
 
-type ServerSyncButtonProps = {
-  style?: CSSProperties;
-  isMobile?: boolean;
-};
-function ServerSyncButton({ style, isMobile = false }: ServerSyncButtonProps) {
-  const { t } = useTranslation();
-  const dispatch = useDispatch();
-  // Give the layout some time to apply the starting animation so we
-  // always finish it correctly even if the sync is almost instant
-  const { isSyncing: syncing, syncState } = useSyncStatus({
-    syncingEndDelayMs: 200,
-  });
-
-  const mobileColor =
-    syncState === 'error'
-      ? theme.errorText
-      : syncState === 'disabled' ||
-          syncState === 'offline' ||
-          syncState === 'local'
-        ? theme.mobileHeaderTextSubdued
-        : theme.mobileHeaderText;
-  const desktopColor =
-    syncState === 'error'
-      ? theme.errorTextDark
-      : syncState === 'disabled' ||
-          syncState === 'offline' ||
-          syncState === 'local'
-        ? theme.buttonBareDisabledText
-        : theme.buttonBareText;
-
-  const activeStyle = isMobile
-    ? {
-        color: mobileColor,
-      }
-    : {};
-
-  const hoveredStyle = isMobile
-    ? {
-        color: mobileColor,
-        background: theme.mobileHeaderTextHover,
-      }
-    : {};
-
-  const mobileIconStyle = {
-    color: mobileColor,
-    justifyContent: 'center',
-    margin: 10,
-    paddingLeft: 5,
-    paddingRight: 3,
-  };
-
-  const mobileTextStyle = {
-    ...styles.text,
-    fontWeight: 500,
-    marginLeft: 2,
-    marginRight: 5,
-  };
-
-  const onSync = () => dispatch(sync());
-
-  useHotkeys(
-    'ctrl+s, cmd+s, meta+s',
-    onSync,
-    {
-      enableOnFormTags: true,
-      preventDefault: true,
-      scopes: ['app'],
-    },
-    [onSync],
-  );
-
-  const tooltipContent =
-    syncState === 'error' ? (
-      <Trans>Sync error — click to retry</Trans>
-    ) : syncState === 'offline' ? (
-      <Trans>Offline — will sync when reconnected</Trans>
-    ) : syncState === 'local' ? (
-      <Trans>Local file, not connected to a server</Trans>
-    ) : syncState === 'disabled' ? (
-      <Trans>Syncing disabled for this file</Trans>
-    ) : (
-      <Trans>
-        Sync with your server to back up this file and access it on other
-        devices
-      </Trans>
-    );
-
+/**
+ * The controls at the title bar's right end: the account menu, and the
+ * notices that go with it. Where the title bar has given up its row, the
+ * budget header shows them on its heading row instead; the development
+ * theme switch stays off that row, where it would cost the last month
+ * its name.
+ */
+export function TitlebarControls({ inHeader = false }: { inHeader?: boolean }) {
+  const isTestEnv = useIsTestEnv();
   return (
-    <Tooltip placement="bottom end" content={tooltipContent}>
-      <Button
-        variant="bare"
-        aria-label={t('Server Sync')}
-        className={css({
-          ...(isMobile
-            ? {
-                ...style,
-                WebkitAppRegion: 'none',
-                ...mobileIconStyle,
-              }
-            : {
-                ...style,
-                WebkitAppRegion: 'none',
-                color: desktopColor,
-              }),
-          '&[data-hovered]': hoveredStyle,
-          '&[data-pressed]': activeStyle,
-        })}
-        onPress={onSync}
-        isDisabled={syncState === 'offline'}
-        aria-disabled={syncState === 'offline'}
-      >
-        {isMobile ? (
-          syncState === 'error' ? (
-            <SvgAlertTriangle width={14} height={14} />
-          ) : (
-            <AnimatedRefresh width={18} height={18} animating={syncing} />
-          )
-        ) : syncState === 'error' ? (
-          <SvgAlertTriangle width={13} />
-        ) : (
-          <AnimatedRefresh animating={syncing} />
-        )}
-        <Text style={isMobile ? { ...mobileTextStyle } : null}>
-          {syncState === 'disabled' ? ` ${t('Disabled')}` : null}
-        </Text>
-      </Button>
-    </Tooltip>
-  );
-}
-
-function BudgetTitlebar() {
-  const [maxMonths, setMaxMonthsPref] = useGlobalPref('maxMonths');
-
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <MonthCountSelector
-        maxMonths={maxMonths || 1}
-        onChange={value => setMaxMonthsPref(value)}
-      />
-    </View>
+    <SpaceBetween gap={10}>
+      <UncategorizedButton compact={inHeader} />
+      <SharedArrayBufferWarning />
+      {isDevelopmentEnvironment() && !isTestEnv && !inHeader && (
+        <ThemeSelector />
+      )}
+      <AccountMenu />
+    </SpaceBetween>
   );
 }
 
@@ -273,11 +131,10 @@ export function Titlebar({ style }: TitlebarProps) {
   const location = useLocation();
   const sidebar = useSidebar();
   const { isNarrowWidth } = useResponsive();
-  const serverURL = useServerURL();
   const [floatingSidebar] = useGlobalPref('floatingSidebar');
-  const isTestEnv = useIsTestEnv();
+  const { isCollapsed } = useTitlebarLayout();
 
-  return isNarrowWidth ? null : (
+  return isNarrowWidth || isCollapsed ? null : (
     <View
       style={{
         flexDirection: 'row',
@@ -335,20 +192,9 @@ export function Titlebar({ style }: TitlebarProps) {
         />
 
         <Route path="/accounts/:id" element={<AccountSyncCheck />} />
-
-        <Route path="/budget" element={<BudgetTitlebar />} />
       </Routes>
       <View style={{ flex: 1 }} />
-      <SpaceBetween gap={10}>
-        <UncategorizedButton />
-        {isDevelopmentEnvironment() && !isTestEnv && <ThemeSelector />}
-        <PrivacyButton />
-        <NotificationsButton />
-        {serverURL ? <ServerSyncButton /> : null}
-        <SharedArrayBufferWarning />
-        <LoggedInUser />
-        <HelpMenu />
-      </SpaceBetween>
+      <TitlebarControls />
     </View>
   );
 }

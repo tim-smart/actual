@@ -165,7 +165,7 @@ export class AccountPage {
 
   async clickSelectAction(action: string | RegExp) {
     await this.selectButton.click();
-    await this.selectTooltip.getByRole('button', { name: action }).click();
+    await this.selectTooltip.getByRole('menuitem', { name: action }).click();
   }
 
   /**
@@ -173,7 +173,7 @@ export class AccountPage {
    */
   async clickCloseAccount() {
     await this.accountMenuButton.click();
-    await this.page.getByRole('button', { name: 'Close Account' }).click();
+    await this.page.getByRole('menuitem', { name: 'Close Account' }).click();
     return new CloseAccountModal(this.page.getByTestId('close-account-modal'));
   }
 
@@ -183,7 +183,7 @@ export class AccountPage {
   async openTransactionColumnsModal() {
     await this.accountMenuButton.click();
     await this.page
-      .getByRole('button', { name: 'Manage table columns' })
+      .getByRole('menuitem', { name: 'Manage table columns' })
       .click();
     return this.page.getByTestId('transaction-table-columns-modal');
   }
@@ -206,7 +206,9 @@ export class AccountPage {
    */
   async filterBy(field: string | RegExp) {
     await this.filterButton.click();
-    await this.filterSelectTooltip.getByRole('button', { name: field }).click();
+    await this.filterSelectTooltip
+      .getByRole('menuitem', { name: field })
+      .click();
 
     return new FilterTooltip(this.page.getByTestId('filters-menu-tooltip'));
   }

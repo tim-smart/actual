@@ -154,7 +154,7 @@ export class EditRuleModal {
     // Need to use page because popover is rendered outside of modal locator
     return this.page
       .locator('[data-popover]')
-      .getByRole('button', { name: value, exact: true });
+      .getByRole('menuitem', { name: value, exact: true });
   }
 
   async save() {

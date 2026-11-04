@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import React, { useEffect, useEffectEvent, useMemo, useState } from 'react';
 
 import { styles } from '@actual-app/components/styles';
+import { tokens } from '@actual-app/components/tokens';
 import { View } from '@actual-app/components/view';
 import * as monthUtils from '@actual-app/core/shared/months';
 import type {
@@ -22,6 +23,7 @@ import {
   useSaveCategoryMutation,
   useSortCategoriesMutation,
 } from '#budget';
+import { useTitlebarLayout } from '#components/TitlebarLayout';
 import { useCategories } from '#hooks/useCategories';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 import { useLocalPref } from '#hooks/useLocalPref';
@@ -42,13 +44,11 @@ export function Budget() {
   const currentMonth = monthUtils.currentMonth();
   const spreadsheet = useSpreadsheet();
   const navigate = useNavigate();
-  const [summaryCollapsed, setSummaryCollapsedPref] = useLocalPref(
-    'budget.summaryCollapsed',
-  );
   const [startMonthPref, setStartMonthPref] = useLocalPref('budget.startMonth');
   const startMonth = startMonthPref || currentMonth;
   const { data: bounds } = useQuery(budgetBoundsQueries.bounds());
   const [budgetType = 'envelope'] = useSyncedPref('budgetType');
+  const { isCollapsed: isTitlebarCollapsed } = useTitlebarLayout();
   const [maxMonthsPref] = useGlobalPref('maxMonths');
   const maxMonths = maxMonthsPref || 1;
   const [initialized, setInitialized] = useState(false);
@@ -110,10 +110,6 @@ export function Budget() {
     if (warmingMonth === month) {
       setStartMonthPref(month);
     }
-  };
-
-  const onToggleCollapse = () => {
-    setSummaryCollapsedPref(!summaryCollapsed);
   };
 
   const onApplyBudgetTemplatesInGroup = async categories => {
@@ -178,11 +174,7 @@ export function Budget() {
   let table;
   if (budgetType === 'tracking') {
     table = (
-      <TrackingBudgetProvider
-        summaryCollapsed={summaryCollapsed}
-        onBudgetAction={onBudgetAction}
-        onToggleSummaryCollapse={onToggleCollapse}
-      >
+      <TrackingBudgetProvider onBudgetAction={onBudgetAction}>
         <AutoSizingBudgetTable
           type={budgetType}
           prewarmStartMonth={startMonth}
@@ -207,11 +199,7 @@ export function Budget() {
     );
   } else {
     table = (
-      <EnvelopeBudgetProvider
-        summaryCollapsed={summaryCollapsed}
-        onBudgetAction={onBudgetAction}
-        onToggleSummaryCollapse={onToggleCollapse}
-      >
+      <EnvelopeBudgetProvider onBudgetAction={onBudgetAction}>
         <AutoSizingBudgetTable
           type={budgetType}
           prewarmStartMonth={startMonth}
@@ -250,6 +238,16 @@ export function Budget() {
           paddingLeft: 8,
           paddingRight: 8,
           overflow: 'hidden',
+          // In the browser the title bar has nothing of its own to show
+          // here, so the header takes its row, inset from the top as it
+          // is from the sides, and the account menu sits on the header's
+          // heading row
+          ...(isTitlebarCollapsed && {
+            paddingTop: 8,
+            [`@media (min-width: ${tokens.breakpoint_small})`]: {
+              paddingTop: 8,
+            },
+          }),
         }}
       >
         <View style={{ flex: 1 }}>{table}</View>
@@ -279,6 +277,9 @@ export type CategoryGroupMonthProps = {
 
 export type BudgetComponents = {
   SummaryComponent: ComponentType<BudgetSummaryProps>;
+  /** Renders nothing; reports what a month's summary would show. */
+  SummaryNeedsComponent: ComponentType<BudgetSummaryProps>;
+  MonthHeaderComponent: ComponentType<BudgetSummaryProps>;
   ExpenseCategoryComponent: ComponentType<CategoryMonthProps>;
   ExpenseGroupComponent: ComponentType<CategoryGroupMonthProps>;
   IncomeCategoryComponent: ComponentType<CategoryMonthProps>;
@@ -299,6 +300,8 @@ function useTrackingBudgetComponents(): BudgetComponents {
   return useMemo(
     () => ({
       SummaryComponent: trackingBudget.BudgetSummary,
+      SummaryNeedsComponent: trackingBudget.SummaryNeeds,
+      MonthHeaderComponent: trackingBudget.MonthHeader,
       ExpenseCategoryComponent: trackingBudget.ExpenseCategoryMonth,
       ExpenseGroupComponent: trackingBudget.ExpenseGroupMonth,
       IncomeCategoryComponent: trackingBudget.IncomeCategoryMonth,
@@ -314,6 +317,8 @@ function useEnvelopeBudgetComponents(): BudgetComponents {
   return useMemo(
     () => ({
       SummaryComponent: envelopeBudget.BudgetSummary,
+      SummaryNeedsComponent: envelopeBudget.SummaryNeeds,
+      MonthHeaderComponent: envelopeBudget.MonthHeader,
       ExpenseCategoryComponent: envelopeBudget.ExpenseCategoryMonth,
       ExpenseGroupComponent: envelopeBudget.ExpenseGroupMonth,
       IncomeCategoryComponent: envelopeBudget.IncomeCategoryMonth,

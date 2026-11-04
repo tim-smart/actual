@@ -76,7 +76,7 @@ test.describe('Accounts', () => {
     await navigation.rightClickAccount('Roth IRA');
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
   });
 
   test('right clicking a transaction row opens context menu', async () => {
@@ -89,7 +89,7 @@ test.describe('Accounts', () => {
     await accountPage.rightClickNthTransaction(0);
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Delete' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   });
 
   test('updates the running balance after editing a transaction amount', async () => {
@@ -211,7 +211,7 @@ test.describe('Accounts', () => {
     await accountPage.setTransactionColumnVisibility('balance', true);
     await accountPage.accountMenuButton.click();
     await page
-      .getByRole('button', { name: 'Hide reconciled transactions' })
+      .getByRole('menuitem', { name: 'Hide reconciled transactions' })
       .click();
 
     await expect(
@@ -256,7 +256,7 @@ test.describe('Accounts', () => {
 
     await accountPage.accountMenuButton.click();
     await page
-      .getByRole('button', { name: /(Hide|Show) reconciled transactions/ })
+      .getByRole('menuitem', { name: /(Hide|Show) reconciled transactions/ })
       .click();
 
     await expect(
@@ -290,7 +290,7 @@ test.describe('Accounts', () => {
 
     await accountPage.accountMenuButton.click();
     await page
-      .getByRole('button', { name: /(Hide|Show) reconciled transactions/ })
+      .getByRole('menuitem', { name: /(Hide|Show) reconciled transactions/ })
       .click();
 
     await expect(
@@ -349,7 +349,7 @@ test.describe('Accounts', () => {
     await accountPage.setTransactionColumnVisibility('balance', true);
     await accountPage.accountMenuButton.click();
     await page
-      .getByRole('button', { name: 'Hide reconciled transactions' })
+      .getByRole('menuitem', { name: 'Hide reconciled transactions' })
       .click();
 
     const unreconciled = accountPage.transactionTableRow.filter({
