@@ -25,7 +25,7 @@ test.describe('Help menu', () => {
   });
 
   test('Check the help menu visuals', async () => {
-    await page.getByRole('button', { name: 'Help' }).click();
+    await page.getByRole('button', { name: /account and app menu/i }).click();
     await expect(page.locator('[data-popover]')).toBeVisible();
     await expect(page.getByText('Keyboard shortcuts')).toBeVisible();
     await expect(page).toMatchThemeScreenshots();
@@ -33,7 +33,7 @@ test.describe('Help menu', () => {
   });
 
   test('Check the keyboard shortcuts modal visuals', async () => {
-    await page.getByRole('button', { name: 'Help' }).click();
+    await page.getByRole('button', { name: /account and app menu/i }).click();
     await page.getByText('Keyboard shortcuts').click();
 
     const keyboardShortcutsModal = page.getByRole('dialog', {
@@ -60,7 +60,7 @@ test.describe('Help menu', () => {
 
     await keyboardShortcutsModal.getByText('Global').click();
     await expect(
-      keyboardShortcutsModal.getByText('Open the help menu'),
+      keyboardShortcutsModal.getByText('Open the account and help menu'),
     ).toBeVisible();
     await expect(page).toMatchThemeScreenshots();
   });

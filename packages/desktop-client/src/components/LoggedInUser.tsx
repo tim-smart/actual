@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
@@ -26,20 +26,29 @@ import { getUserData, signOut } from '#users/usersSlice';
 import { PrivacyFilter } from './PrivacyFilter';
 import { useMultiuserEnabled, useServerURL } from './ServerContext';
 
-type LoggedInUserProps = {
-  hideIfNoServer?: boolean;
-  style?: CSSProperties;
+export type ServerStatus = {
+  state: 'none' | 'offline' | 'online';
+  message: string;
+  tooltip: ReactNode;
 };
 
-export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
+type ServerAccountMenuItem = {
+  name: string;
+  text: string;
+};
+
+/**
+ * Everything the account menu needs to know about the server and the signed
+ * in user: the connection status, who is signed in, and the actions that
+ * apply (sign out, change password, server URL, user management).
+ */
+export function useServerAccount() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const userData = useSelector(state => state.user.data);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
   const serverUrl = useServerURL();
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const [budgetId] = useMetadataPref('id');
   const [cloudFileId] = useMetadataPref('cloudFileId');
   const location = useLocation();
@@ -50,7 +59,6 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
     f => f.state === 'remote' || f.state === 'synced' || f.state === 'detached',
   ) as (SyncedLocalFile | RemoteFile)[];
   const currentFile = remoteFiles.find(f => f.cloudFileId === cloudFileId);
-  const hasSyncedPrefs = useSelector(state => state.prefs.synced);
 
   const initializeUserData = useCallback(async () => {
     try {
@@ -81,9 +89,7 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
     void navigate('/change-password');
   }
 
-  const handleMenuSelect = async (type: string) => {
-    setMenuOpen(false);
-
+  const onMenuSelect = async (type: string) => {
     switch (type) {
       case 'change-password':
         void onChangePassword();
@@ -113,9 +119,10 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
     }
   };
 
-  function getServerStatus() {
+  function getServerStatus(): ServerStatus {
     if (!serverUrl) {
       return {
+        state: 'none',
         message: t('No server'),
         tooltip: (
           <Trans>
@@ -130,6 +137,7 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
 
     if (userData?.offline) {
       return {
+        state: 'offline',
         message: t('Server offline'),
         tooltip: (
           <Trans>
@@ -142,6 +150,7 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
     }
 
     return {
+      state: 'online',
       message: t('Server online'),
       tooltip: (
         <Trans>Connected to your server — your budget is syncing.</Trans>
@@ -149,32 +158,10 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
     };
   }
 
-  if (hideIfNoServer && !serverUrl) return null;
-
-  if (loading && serverUrl) {
-    return (
-      <Text
-        style={{
-          color: theme.pageTextLight,
-          fontStyle: 'italic',
-          ...styles.delayedFadeIn,
-          ...style,
-        }}
-      >
-        <Trans>Connecting...</Trans>
-      </Text>
-    );
-  }
-
-  type MenuItem = {
-    name: string;
-    text: string;
-  };
-
-  const getMenuItems = (): (MenuItem | typeof Menu.line)[] => {
+  const getMenuItems = (): (ServerAccountMenuItem | typeof Menu.line)[] => {
     const isAdmin = hasPermission(Permissions.ADMINISTRATOR);
 
-    const baseMenu: (MenuItem | typeof Menu.line)[] = [];
+    const baseMenu: (ServerAccountMenuItem | typeof Menu.line)[] = [];
     if (
       serverUrl &&
       !userData?.offline &&
@@ -190,7 +177,7 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
       text: serverUrl ? t('Change server URL') : t('Start using a server'),
     });
 
-    const adminMenu: (MenuItem | typeof Menu.line)[] = [];
+    const adminMenu: (ServerAccountMenuItem | typeof Menu.line)[] = [];
     if (multiuserEnabled && isAdmin) {
       if (!budgetId && location.pathname !== '/') {
         adminMenu.push({ name: 'index', text: t('View file list') });
@@ -225,7 +212,58 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
     return [...adminMenu, ...baseMenu];
   };
 
-  const serverStatus = getServerStatus();
+  // The last known name stays while the server is asked again (every sync
+  // asks), so the account menu's avatar never flickers between the
+  // initials and a blank person
+  const displayName =
+    multiuserEnabled && userData?.displayName ? userData.displayName : null;
+
+  return {
+    loading: loading && Boolean(serverUrl),
+    serverUrl,
+    /** The server has been found unreachable. */
+    isServerOffline: !!userData?.offline,
+    serverStatus: getServerStatus(),
+    displayName,
+    menuItems: getMenuItems(),
+    onMenuSelect,
+  };
+}
+
+type LoggedInUserProps = {
+  hideIfNoServer?: boolean;
+  style?: CSSProperties;
+};
+
+export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const hasSyncedPrefs = useSelector(state => state.prefs.synced);
+  const {
+    loading,
+    serverUrl,
+    serverStatus,
+    displayName,
+    menuItems,
+    onMenuSelect,
+  } = useServerAccount();
+
+  if (hideIfNoServer && !serverUrl) return null;
+
+  if (loading) {
+    return (
+      <Text
+        style={{
+          color: theme.pageTextLight,
+          fontStyle: 'italic',
+          ...styles.delayedFadeIn,
+          ...style,
+        }}
+      >
+        <Trans>Connecting...</Trans>
+      </Text>
+    );
+  }
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', ...style }}>
@@ -242,40 +280,30 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
           {serverStatus.message}
         </Button>
       </Tooltip>
-      {!loading &&
-        multiuserEnabled &&
-        userData &&
-        userData?.displayName &&
-        !hasSyncedPrefs && (
-          <small>
-            (
-            <Trans>
-              logged in as:{' '}
-              <span>
-                {{ userName: userData?.displayName } as TransObjectLiteral}
-              </span>
-            </Trans>
-            )
-          </small>
-        )}
-      {!loading &&
-        multiuserEnabled &&
-        userData &&
-        userData?.displayName &&
-        hasSyncedPrefs && (
-          <small>
-            (
-            <Trans>
-              logged in as:{' '}
-              <span>
-                <PrivacyFilter>
-                  {{ userName: userData?.displayName } as TransObjectLiteral}
-                </PrivacyFilter>
-              </span>
-            </Trans>
-            )
-          </small>
-        )}
+      {displayName && !hasSyncedPrefs && (
+        <small>
+          (
+          <Trans>
+            logged in as:{' '}
+            <span>{{ userName: displayName } as TransObjectLiteral}</span>
+          </Trans>
+          )
+        </small>
+      )}
+      {displayName && hasSyncedPrefs && (
+        <small>
+          (
+          <Trans>
+            logged in as:{' '}
+            <span>
+              <PrivacyFilter>
+                {{ userName: displayName } as TransObjectLiteral}
+              </PrivacyFilter>
+            </span>
+          </Trans>
+          )
+        </small>
+      )}
 
       <Popover
         offset={8}
@@ -284,8 +312,11 @@ export function LoggedInUser({ hideIfNoServer, style }: LoggedInUserProps) {
         onOpenChange={() => setMenuOpen(false)}
       >
         <Menu
-          onMenuSelect={handleMenuSelect}
-          items={getMenuItems().filter(Boolean)}
+          onMenuSelect={name => {
+            setMenuOpen(false);
+            void onMenuSelect(name);
+          }}
+          items={menuItems.filter(Boolean)}
         />
       </Popover>
     </View>

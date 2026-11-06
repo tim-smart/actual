@@ -10,16 +10,24 @@ export class BudgetPage {
   readonly budgetTableTotals: Locator;
   readonly selectedMonthButton: Locator;
   readonly nextMonthButton: Locator;
+  readonly toBudgetButton: Locator;
   readonly budgetTableScrollContainer: Locator;
 
   constructor(page: Page) {
     this.page = page;
 
-    this.budgetSummary = page.getByTestId('budget-summary');
+    // The summaries strip also renders the month before and after the
+    // displayed ones (clipped, inert) so it can animate; skip those.
+    this.budgetSummary = page.locator(
+      '[data-testid="budget-summary"]:not([inert] *)',
+    );
     this.budgetTable = page.getByTestId('budget-table');
     this.budgetTableTotals = this.budgetTable.getByTestId('budget-totals');
     this.selectedMonthButton = page.getByTestId('selected-budget-month');
-    this.nextMonthButton = page.getByTitle('Next month');
+    this.nextMonthButton = page.getByRole('button', { name: 'Next month' });
+    this.toBudgetButton = this.budgetSummary.getByRole('button', {
+      name: /to budget|overbudgeted/i,
+    });
     this.budgetTableScrollContainer = page.getByTestId(
       'budget-table-scroll-container',
     );
@@ -104,6 +112,12 @@ export class BudgetPage {
     await input.waitFor({ state: 'visible' });
     await input.fill(amount);
     await input.press('Enter');
+  }
+
+  /** Opens the breakdown and actions for the first month's "to budget" figure. */
+  async openToBudgetMenu() {
+    await this.toBudgetButton.first().click();
+    await this.page.locator('[data-popover]').waitFor({ state: 'visible' });
   }
 
   async getSelectedMonth() {
@@ -228,7 +242,7 @@ export class BudgetPage {
       .click();
 
     await this.page
-      .getByRole('button', { name: 'Transfer to another category' })
+      .getByRole('menuitem', { name: 'Transfer to another category' })
       .click();
 
     await this.page.getByPlaceholder('(none)').click();

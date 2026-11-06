@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { Form } from 'react-aria-components';
 import { Trans } from 'react-i18next';
 
@@ -15,6 +15,7 @@ type HoldMenuProps = {
   onClose: () => void;
 };
 export function HoldMenu({ onSubmit, onClose }: HoldMenuProps) {
+  const amountId = useId();
   const [amount, setAmount] = useState<IntegerAmount | null>(null);
 
   useSheetValue<'envelope-budget', 'to-budget'>('to-budget', ({ value }) => {
@@ -35,12 +36,16 @@ export function HoldMenu({ onSubmit, onClose }: HoldMenuProps) {
       }}
     >
       <View style={{ padding: 10 }}>
-        <View style={{ marginBottom: 5 }}>
+        <label htmlFor={amountId} style={{ display: 'block', marginBottom: 5 }}>
           <Trans>Hold this amount:</Trans>
-        </View>
+        </label>
         <View>
           <InitialFocus>
-            <FinancialInput value={amount} onChangeValue={setAmount} />
+            <FinancialInput
+              id={amountId}
+              value={amount}
+              onChangeValue={setAmount}
+            />
           </InitialFocus>
         </View>
         <View

@@ -76,7 +76,7 @@ test.describe('Reports', () => {
     await reportsPage.rightClickReportCard('Net Worth');
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
   });
 
   test('loads net worth graph and checks visuals', async () => {
@@ -156,7 +156,7 @@ test.describe('Reports', () => {
           .click();
         await page
           .getByRole('menu')
-          .getByRole('button', { name: 'Account', exact: true })
+          .getByRole('menuitem', { name: 'Account', exact: true })
           .click();
         await page
           .getByRole('textbox', { name: 'Account', exact: true })
@@ -392,7 +392,7 @@ test.describe('Reports', () => {
 
       const splitRow = page.getByText('Split:', { exact: true }).locator('..');
       await splitRow.getByRole('button').click();
-      await page.getByRole('button', { name: 'Tag', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Tag', exact: true }).click();
       await customReportPage.selectViz('Data Table');
 
       await expect(page.getByText('#red', { exact: true })).toBeVisible();
@@ -433,7 +433,7 @@ test.describe('Reports', () => {
       await page.goBack();
       await page.getByTestId('reports-page').waitFor();
       await splitRow.getByRole('button').click();
-      await page.getByRole('button', { name: 'Tag', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Tag', exact: true }).click();
       await customReportPage.selectViz('Data Table');
       await page.getByRole('button', { name: 'Tag scope: All tags' }).click();
       const scopedTagPopover = page.getByTestId('tag-scope-popover');
@@ -459,7 +459,9 @@ test.describe('Reports', () => {
       await typeRow
         .getByRole('button', { name: 'Payment', exact: true })
         .click();
-      await page.getByRole('button', { name: 'Budgeted', exact: true }).click();
+      await page
+        .getByRole('menuitem', { name: 'Budgeted', exact: true })
+        .click();
       await expect(splitRow.getByRole('button')).toHaveText('Category');
     });
 
@@ -482,7 +484,9 @@ test.describe('Reports', () => {
 
       const splitRow = page.getByText('Split:', { exact: true }).locator('..');
       await splitRow.getByRole('button', { name: 'Tag', exact: true }).click();
-      await page.getByRole('button', { name: 'Category', exact: true }).click();
+      await page
+        .getByRole('menuitem', { name: 'Category', exact: true })
+        .click();
       await expect(warning).not.toBeVisible();
     });
 
@@ -533,7 +537,10 @@ test.describe('Reports', () => {
           .getByRole('button', { name: 'Options', exact: true })
           .click();
         await page
-          .getByRole('button', { name: 'Show empty rows', exact: true })
+          .getByRole('menuitemcheckbox', {
+            name: 'Show empty rows',
+            exact: true,
+          })
           .click();
         await page.keyboard.press('Escape');
 
