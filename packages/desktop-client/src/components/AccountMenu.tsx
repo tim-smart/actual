@@ -17,7 +17,11 @@ import type { TransObjectLiteral } from '@actual-app/core/types/util';
 import { css, cx, keyframes } from '@emotion/css';
 
 import { sync } from '#app/appSlice';
-import { headerControlClass } from '#components/budget/headerStyles';
+import {
+  HEADER_CONTROL_HOVER_BACKGROUND,
+  headerChevronClass,
+  headerControlClass,
+} from '#components/budget/headerStyles';
 import { useHelpMenu } from '#hooks/useHelpMenu';
 import type { HelpMenuItem } from '#hooks/useHelpMenu';
 import { useNavigate } from '#hooks/useNavigate';
@@ -234,12 +238,21 @@ export function AccountMenu() {
           aria-expanded={isOpen}
           data-testid="help-menu-button"
           onPress={() => setIsOpen(true)}
-          // The same control as the budget header's year button and
+          // The same control as the budget header's jump button and
           // Today: one family of controls, on the title bar and on the
-          // header's heading row alike
+          // header's heading row alike. The chip's fill is kept in a
+          // variable so the ring around the status dot can match it
+          // while the pointer tints the chip.
           className={cx(
             headerControlClass,
-            css({ gap: 5, padding: '0 6px 0 2px' }),
+            css({
+              gap: 5,
+              padding: '0 6px 0 2px',
+              '--account-chip-fill': theme.tableBackground,
+              '&[data-hovered], &[data-pressed]': {
+                '--account-chip-fill': HEADER_CONTROL_HOVER_BACKGROUND,
+              },
+            }),
           )}
         >
           <View
@@ -284,7 +297,7 @@ export function AccountMenu() {
                 position: 'absolute',
                 right: -2,
                 bottom: -2,
-                boxShadow: `0 0 0 2px ${theme.tableBackground}`,
+                boxShadow: '0 0 0 2px var(--account-chip-fill)',
               }}
             />
           </View>
@@ -309,12 +322,8 @@ export function AccountMenu() {
           )}
           <SvgCheveronDown
             aria-hidden
-            style={{
-              width: 11,
-              height: 11,
-              flexShrink: 0,
-              color: theme.tableHeaderText,
-            }}
+            className={headerChevronClass}
+            style={{ width: 11, height: 11 }}
           />
         </Button>
       </Tooltip>

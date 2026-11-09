@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
+import * as monthUtils from '@actual-app/core/shared/months';
 
 import { TitlebarControls } from '#components/Titlebar';
 import { useTitlebarLayout } from '#components/TitlebarLayout';
@@ -44,6 +45,11 @@ type BudgetPageHeaderProps = {
  * inset from its corner, over the scrollbar gutter and the last
  * heading's padding. The heading keeps clear of it inside its own width,
  * so every heading stays exactly as wide as its column.
+ *
+ * The scrollbar gutter at the header's right end is the last column's:
+ * it carries that column's tint to the header's edge, so a tinted last
+ * month does not end a gutter short of the frame with a bare stripe of
+ * the header's own background after it.
  */
 export function BudgetPageHeader({
   startMonth,
@@ -67,6 +73,11 @@ export function BudgetPageHeader({
   const lastHeadingReserve = hasAccountMenu
     ? Math.max(0, accountMenuWidth + HEADER_CONTROL_GAP - scrollbarGutter)
     : 0;
+  const lastMonth = monthUtils.addMonths(startMonth, numMonths - 1);
+  const gutterTint =
+    lastMonth === monthUtils.currentMonth()
+      ? theme.budgetCurrentMonth
+      : theme.budgetOtherMonth;
 
   return (
     <View
@@ -80,6 +91,21 @@ export function BudgetPageHeader({
         borderBottom: `1px solid ${theme.tableBorder}`,
       }}
     >
+      {scrollbarGutter > 0 && (
+        <View
+          aria-hidden
+          data-testid="budget-header-gutter"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: scrollbarGutter,
+            backgroundColor: gutterTint,
+            borderTopRightRadius: 6,
+          }}
+        />
+      )}
       <MonthPicker
         startMonth={startMonth}
         numDisplayed={numMonths}

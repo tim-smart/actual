@@ -115,13 +115,8 @@ const todaySegmentClass = css({
   borderRight: `1px solid ${theme.tableBorder}`,
   borderRadius: 0,
   boxShadow: 'none',
-  // Pointed at, it fills like the step buttons either side of it; its
-  // hairlines are the pager's, and stay
-  '&[data-hovered]': {
-    backgroundColor: theme.buttonBareBackgroundHover,
-    borderColor: theme.tableBorder,
-  },
-  '&[data-pressed]': { boxShadow: 'none' },
+  // Pointed at, it fills as the step buttons either side of it do, the
+  // same wash on the same white; its hairlines are the pager's, and stay
   '&[data-focus-visible]': { outlineOffset: -2 },
 });
 

@@ -15,7 +15,7 @@ import { css, cx } from '@emotion/css';
 
 import { MAX_MONTHS, SUMMARY_FIGURE_CHEVRON } from './budgetHeaderLayout';
 import { useBudgetMonthCount } from './BudgetMonthCountContext';
-import { headerControlClass } from './headerStyles';
+import { headerChevronClass, headerControlClass } from './headerStyles';
 
 type MonthCountSelectorProps = {
   maxMonths: number;
@@ -82,11 +82,10 @@ export function MonthCountSelector({
             {countLabel(selectedCount)}
             <SvgCheveronDown
               aria-hidden
+              className={headerChevronClass}
               style={{
                 width: SUMMARY_FIGURE_CHEVRON,
                 height: SUMMARY_FIGURE_CHEVRON,
-                flexShrink: 0,
-                color: theme.tableHeaderText,
               }}
             />
           </Button>
