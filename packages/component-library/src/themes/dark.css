@@ -51,6 +51,50 @@
   --color-toBudgetPositive: var(--color-numberPositive);
   --color-toBudgetZero: var(--color-numberPositive);
   --color-toBudgetNegative: var(--color-budgetNumberNegative);
+  --color-toBudgetPositiveBackground: color-mix(
+    in srgb,
+    var(--palette-green500) 14%,
+    var(--palette-navy800)
+  );
+  --color-toBudgetPositiveBorder: color-mix(
+    in srgb,
+    var(--palette-green500) 40%,
+    var(--palette-navy800)
+  );
+  --color-toBudgetZeroBackground: var(--color-tableBackground);
+  --color-toBudgetZeroBorder: var(--palette-navy600);
+  /* Lighter than the month behind it, but dark enough for the warning red
+     on it to keep AA contrast */
+  --color-budgetProjectedBackground: color-mix(
+    in srgb,
+    var(--palette-navy700) 60%,
+    var(--palette-navy800)
+  );
+  --color-toBudgetNegativeBackground: color-mix(
+    in srgb,
+    var(--palette-red500) 16%,
+    var(--palette-navy800)
+  );
+  --color-toBudgetNegativeBorder: color-mix(
+    in srgb,
+    var(--palette-red500) 45%,
+    var(--palette-navy800)
+  );
+  --color-toBudgetNegativeText: var(--palette-red200);
+  --color-budgetSummaryShadow: rgba(0, 0, 0, 0.35);
+  --color-budgetFocusRing: var(--palette-purple200);
+  /* The current month's underline and dot: 3:1 on the month behind them */
+  --color-budgetCurrentMonthMarker: var(--palette-purple200);
+  --color-budgetControlTrack: var(--palette-navy900);
+  --color-budgetAtRiskBackground: color-mix(
+    in srgb,
+    var(--palette-orange500) 12%,
+    var(--palette-navy800)
+  );
+  --color-budgetAtRiskBorder: var(--palette-orange500);
+  --color-budgetAtRiskText: var(--palette-orange400);
+  --color-budgetControlSelected: var(--palette-navy600);
+  --color-budgetControlSelectedRing: var(--palette-navy500);
 
   --color-sidebarBackground: var(--palette-navy900);
   --color-sidebarItemBackgroundPending: var(--palette-orange200);
@@ -103,9 +147,11 @@
 
   --color-menuBackground: var(--palette-navy800);
   --color-menuItemBackground: var(--palette-navy800);
-  --color-menuItemBackgroundHover: var(--palette-navy500);
+  /* navy500 left the hovered item's text at 4.1:1 */
+  --color-menuItemBackgroundHover: var(--palette-navy600);
   --color-menuItemText: var(--palette-navy100);
   --color-menuItemTextHover: var(--palette-navy50);
+  --color-menuItemFocusRing: var(--color-menuItemTextHover);
   --color-menuItemTextSelected: var(--palette-purple400);
   --color-menuItemTextHeader: var(--palette-purple200);
   --color-menuBorder: var(--palette-navy900);
@@ -181,6 +227,11 @@
     --color-buttonNormalSelectedBackground
   );
   --color-datePickerRangeBackground: var(--palette-purple600);
+  --color-notificationBadgeText: var(--color-buttonPrimaryText);
+  --color-datePickerSelectedText: var(--color-buttonPrimaryText);
+  --color-datePickerSelectedBackgroundHover: var(
+    --color-buttonPrimaryBackgroundHover
+  );
 
   --color-buttonBareText: var(--color-pageText);
   --color-buttonBareTextHover: var(--color-pageText);

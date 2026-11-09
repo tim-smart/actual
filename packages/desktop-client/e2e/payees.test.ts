@@ -64,7 +64,7 @@ test.describe('Payees', () => {
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
     await expect(
-      menu.getByRole('button', { name: 'Create rule' }),
+      menu.getByRole('menuitem', { name: 'Create rule' }),
     ).toBeVisible();
   });
 });

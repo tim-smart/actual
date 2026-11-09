@@ -51,6 +51,43 @@
   --color-toBudgetPositive: var(--color-numberPositive);
   --color-toBudgetZero: var(--color-numberPositive);
   --color-toBudgetNegative: var(--color-budgetNumberNegative);
+  --color-toBudgetPositiveBackground: color-mix(
+    in srgb,
+    var(--palette-green500) 14%,
+    var(--palette-gray800)
+  );
+  --color-toBudgetPositiveBorder: color-mix(
+    in srgb,
+    var(--palette-green500) 40%,
+    var(--palette-gray800)
+  );
+  --color-toBudgetZeroBackground: var(--color-tableBackground);
+  --color-toBudgetZeroBorder: var(--palette-gray500);
+  --color-budgetProjectedBackground: var(--palette-gray600);
+  --color-toBudgetNegativeBackground: color-mix(
+    in srgb,
+    var(--palette-red500) 16%,
+    var(--palette-gray800)
+  );
+  --color-toBudgetNegativeBorder: color-mix(
+    in srgb,
+    var(--palette-red500) 45%,
+    var(--palette-gray800)
+  );
+  --color-toBudgetNegativeText: var(--palette-red200);
+  --color-budgetSummaryShadow: rgba(0, 0, 0, 0.5);
+  --color-budgetFocusRing: var(--palette-purple200);
+  --color-budgetCurrentMonthMarker: var(--color-buttonPrimaryBackground);
+  --color-budgetControlTrack: var(--palette-gray900);
+  --color-budgetAtRiskBackground: color-mix(
+    in srgb,
+    var(--palette-orange500) 12%,
+    var(--palette-gray800)
+  );
+  --color-budgetAtRiskBorder: var(--palette-orange500);
+  --color-budgetAtRiskText: var(--palette-orange400);
+  --color-budgetControlSelected: var(--palette-gray600);
+  --color-budgetControlSelectedRing: var(--palette-gray400);
 
   --color-sidebarBackground: var(--palette-gray900);
   --color-sidebarItemBackgroundPending: var(--palette-orange200);
@@ -106,6 +143,7 @@
   --color-menuItemBackgroundHover: var(--palette-gray500);
   --color-menuItemText: var(--palette-gray100);
   --color-menuItemTextHover: var(--palette-gray50);
+  --color-menuItemFocusRing: var(--color-menuItemTextHover);
   --color-menuItemTextSelected: var(--palette-purple400);
   --color-menuItemTextHeader: var(--palette-purple200);
   --color-menuBorder: var(--palette-gray800);
@@ -150,10 +188,12 @@
   --color-buttonMenuSelectedBackgroundHover: var(--palette-gray300);
   --color-buttonMenuSelectedBorder: var(--color-buttonMenuSelectedBackground);
 
-  --color-buttonPrimaryText: var(--palette-white);
+  /* White on the light purple fill is only 3.5:1 */
+  --color-buttonPrimaryText: var(--palette-gray900);
   --color-buttonPrimaryTextHover: var(--color-buttonPrimaryText);
   --color-buttonPrimaryBackground: var(--palette-purple300);
-  --color-buttonPrimaryBackgroundHover: var(--color-buttonPrimaryBackground);
+  /* Lighter on hover, so hover shows; the dark text only gains contrast */
+  --color-buttonPrimaryBackgroundHover: var(--palette-purple200);
   --color-buttonPrimaryBorder: var(--color-buttonPrimaryBackground);
   --color-buttonPrimaryShadow: rgba(0, 0, 0, 0.6);
   --color-buttonPrimaryDisabledText: var(--palette-gray400);
@@ -182,6 +222,11 @@
     --color-buttonNormalSelectedBackground
   );
   --color-datePickerRangeBackground: var(--palette-purple600);
+  --color-datePickerSelectedText: var(--color-buttonPrimaryText);
+  --color-notificationBadgeText: var(--color-buttonPrimaryText);
+  --color-datePickerSelectedBackgroundHover: var(
+    --color-buttonPrimaryBackgroundHover
+  );
 
   --color-buttonBareText: var(--color-pageText);
   --color-buttonBareTextHover: var(--color-pageText);

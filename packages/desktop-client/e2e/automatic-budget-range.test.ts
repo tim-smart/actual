@@ -53,11 +53,7 @@ for (const viewport of [
           : budgetPage.selectedBudgetMonthButton;
 
       async function expectLastMonth(month: string) {
-        if (budgetPage instanceof BudgetPage) {
-          await budgetPage.nextMonthButton.click();
-        } else {
-          await expect(budgetPage.nextMonthButton).toBeDisabled();
-        }
+        await expect(budgetPage.nextMonthButton).toBeDisabled();
         await expect(selected).toHaveAttribute('data-month', month);
       }
 
@@ -93,10 +89,14 @@ for (const viewport of [
 
         const selected = page.getByTestId('selected-budget-month');
         await expect(selected).toHaveCount(3);
-        for (let index = 0; index < 14; index++) {
-          await page.getByTitle('Next month').click();
+        const nextMonth = page.getByRole('button', { name: 'Next month' });
+        for (let index = 0; index < 13; index++) {
+          await nextMonth.click();
         }
         await expect(selected.last()).toHaveAttribute('data-month', '2018-04');
+        // At the end of the range the button says so instead of moving on
+        await expect(nextMonth).toBeDisabled();
+        await expect(nextMonth).toHaveAccessibleDescription('End of budget');
 
         await setBudgetAmount(page, '2018-01', 0);
         await page.reload();

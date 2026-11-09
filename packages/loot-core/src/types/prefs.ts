@@ -100,7 +100,6 @@ export type LocalPrefs = Partial<{
   'sidebar.accountsOpenState': Record<string, boolean>;
   'expand-splits': boolean;
   'budget.collapsed': string[];
-  'budget.summaryCollapsed': boolean;
   'budget.showHiddenCategories': boolean;
   'budget.startMonth': string;
   'flags.updateNotificationShownForVersion': string;

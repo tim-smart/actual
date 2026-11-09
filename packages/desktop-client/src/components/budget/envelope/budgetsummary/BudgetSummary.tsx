@@ -1,295 +1,182 @@
-import React, { memo, useRef, useState } from 'react';
+import React, { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@actual-app/components/button';
-import { SvgDotsHorizontalTriple } from '@actual-app/components/icons/v1';
-import {
-  SvgArrowButtonDown1,
-  SvgArrowButtonUp1,
-} from '@actual-app/components/icons/v2';
-import { Popover } from '@actual-app/components/popover';
-import { styles } from '@actual-app/components/styles';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 import * as monthUtils from '@actual-app/core/shared/months';
-import { css } from '@emotion/css';
 
+import {
+  getSummaryWidths,
+  SUMMARY_ACTIONS_HEIGHT,
+  SUMMARY_GAP,
+  SUMMARY_INLINE_GAP,
+  SUMMARY_PADDING_BOTTOM,
+  SUMMARY_PADDING_TOP,
+  SUMMARY_SIDE_PADDING,
+} from '#components/budget/budgetHeaderLayout';
+import { useEnvelopeSheetValue } from '#components/budget/envelope/EnvelopeBudgetComponents';
 import { useEnvelopeBudget } from '#components/budget/envelope/EnvelopeBudgetContext';
-import { NotesButton } from '#components/NotesButton';
+import { measureText } from '#components/budget/measureText';
+import { MonthsContext } from '#components/budget/MonthsContext';
+import { SummaryDetails } from '#components/budget/SummaryDetailLine';
+import type { SummaryDetailLineProps } from '#components/budget/SummaryDetailLine';
+import { useReportSummaryNeeds } from '#components/budget/useSummaryLayout';
+import { useFormat } from '#hooks/useFormat';
 import { useLocale } from '#hooks/useLocale';
 import { SheetNameProvider } from '#hooks/useSheetName';
-import { useUndo } from '#hooks/useUndo';
+import { envelopeBudget } from '#spreadsheet/bindings';
 
-import { BudgetMonthMenu } from './BudgetMonthMenu';
+import { getToBudgetLabel } from './getToBudgetLabel';
+import { MonthHeader } from './MonthHeader';
 import { ToBudget } from './ToBudget';
-import { TotalsList } from './TotalsList';
 
 type BudgetSummaryProps = {
   month: string;
 };
-export const BudgetSummary = memo(({ month }: BudgetSummaryProps) => {
-  const locale = useLocale();
-  const {
-    currentMonth,
-    summaryCollapsed: collapsed,
-    onBudgetAction,
-    onToggleSummaryCollapse,
-  } = useEnvelopeBudget();
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const triggerRef = useRef(null);
-  const { showUndoNotification } = useUndo();
-
-  function onMenuOpen() {
-    setMenuOpen(true);
-  }
-
-  function onMenuClose() {
-    setMenuOpen(false);
-  }
-
-  const prevMonthName = monthUtils.format(
-    monthUtils.prevMonth(month),
-    'MMM',
-    locale,
-  );
-
-  const ExpandOrCollapseIcon = collapsed
-    ? SvgArrowButtonDown1
-    : SvgArrowButtonUp1;
-
-  const displayMonth = monthUtils.format(month, "MMMM ''yy", locale);
-  const { t } = useTranslation();
-
+/** The month's "to budget" figure and the amounts that explain it. */
+export function BudgetSummary({ month }: BudgetSummaryProps) {
   return (
     <View
       data-testid="budget-summary"
       data-month={month}
       style={{
-        backgroundColor:
-          month === currentMonth
-            ? theme.budgetCurrentMonth
-            : theme.budgetOtherMonth,
-        boxShadow: styles.cardShadow,
-        borderRadius: 6,
-        marginLeft: 0,
-        marginRight: 0,
-        marginTop: 5,
         flex: 1,
+        minWidth: 0,
+        padding: `${SUMMARY_PADDING_TOP}px ${SUMMARY_SIDE_PADDING}px ${SUMMARY_PADDING_BOTTOM}px`,
         cursor: 'default',
-        marginBottom: 5,
-        overflow: 'hidden',
-        '& .hover-visible': {
-          opacity: 0,
-          transition: 'opacity .25s',
-        },
-        '&:hover .hover-visible': {
-          opacity: 1,
-        },
       }}
     >
       <SheetNameProvider name={monthUtils.sheetForMonth(month)}>
-        <View
-          style={{
-            padding: '0 13px',
-            ...(collapsed ? { margin: '10px 0' } : { marginTop: 16 }),
-          }}
-        >
-          <View
-            style={{
-              position: 'absolute',
-              left: 10,
-              top: 0,
-            }}
-          >
-            <Button
-              variant="bare"
-              aria-label={
-                collapsed
-                  ? t('Expand month summary')
-                  : t('Collapse month summary')
-              }
-              className="hover-visible"
-              onPress={onToggleSummaryCollapse}
-            >
-              <ExpandOrCollapseIcon
-                width={13}
-                height={13}
-                // The margin is to make it the exact same size as the dots button
-                style={{ color: theme.pageTextLight, margin: 1 }}
-              />
-            </Button>
-          </View>
-
-          <div
-            className={css([
-              {
-                textAlign: 'center',
-                marginTop: 3,
-                fontSize: 18,
-                fontWeight: 500,
-                textDecorationSkip: 'ink',
-              },
-              currentMonth === month && { fontWeight: 'bold' },
-            ])}
-          >
-            {monthUtils.format(month, 'MMMM', locale)}
-          </div>
-
-          <View
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: 0,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-          >
-            <View>
-              <NotesButton
-                id={`budget-${month}`}
-                width={15}
-                height={15}
-                tooltipPosition="bottom right"
-                defaultColor={theme.pageTextLight}
-              />
-            </View>
-            <View style={{ userSelect: 'none', marginLeft: 2 }}>
-              <Button
-                ref={triggerRef}
-                variant="bare"
-                aria-label={t('Menu')}
-                onPress={onMenuOpen}
-              >
-                <SvgDotsHorizontalTriple
-                  width={15}
-                  height={15}
-                  style={{ color: theme.pageTextLight }}
-                />
-              </Button>
-
-              <Popover
-                triggerRef={triggerRef}
-                isOpen={menuOpen}
-                onOpenChange={onMenuClose}
-              >
-                <BudgetMonthMenu
-                  onCopyLastMonthBudget={() => {
-                    onBudgetAction(month, 'copy-last');
-                    onMenuClose();
-                    showUndoNotification({
-                      message: t(
-                        "{{displayMonth}} budgets have all been set to last month's budgeted amounts.",
-                        { displayMonth },
-                      ),
-                    });
-                  }}
-                  onSetBudgetsToZero={() => {
-                    onBudgetAction(month, 'set-zero');
-                    onMenuClose();
-                    showUndoNotification({
-                      message: t(
-                        '{{displayMonth}} budgets have all been set to zero.',
-                        { displayMonth },
-                      ),
-                    });
-                  }}
-                  onSetMonthsAverage={numberOfMonths => {
-                    onBudgetAction(month, `set-${numberOfMonths}-avg`);
-                    onMenuClose();
-                    showUndoNotification({
-                      message:
-                        numberOfMonths === 12
-                          ? t(
-                              `${displayMonth} budgets have all been set to yearly average.`,
-                            )
-                          : t(
-                              `${displayMonth} budgets have all been set to ${numberOfMonths} month average.`,
-                            ),
-                    });
-                  }}
-                  onCheckTemplates={() => {
-                    onBudgetAction(month, 'check-templates');
-                    onMenuClose();
-                  }}
-                  onApplyBudgetTemplates={() => {
-                    onBudgetAction(month, 'apply-goal-template');
-                    onMenuClose();
-                    showUndoNotification({
-                      message: t(
-                        '{{displayMonth}} budget templates have been applied.',
-                        { displayMonth },
-                      ),
-                    });
-                  }}
-                  onOverwriteWithBudgetTemplates={() => {
-                    onBudgetAction(month, 'overwrite-goal-template');
-                    onMenuClose();
-                    showUndoNotification({
-                      message: t(
-                        '{{displayMonth}} budget templates have been overwritten.',
-                        { displayMonth },
-                      ),
-                    });
-                  }}
-                  onEndOfMonthCleanup={() => {
-                    onBudgetAction(month, 'cleanup-goal-template');
-                    onMenuClose();
-                    showUndoNotification({
-                      message: t(
-                        '{{displayMonth}} end-of-month cleanup templates have been applied.',
-                        { displayMonth },
-                      ),
-                    });
-                  }}
-                />
-              </Popover>
-            </View>
-          </View>
-        </View>
-
-        {collapsed ? (
-          <View
-            style={{
-              alignItems: 'center',
-              padding: '10px 20px',
-              justifyContent: 'space-between',
-              backgroundColor: theme.budgetCurrentMonth,
-              borderTop: '1px solid ' + theme.tableBorder,
-            }}
-          >
-            <ToBudget
-              prevMonthName={prevMonthName}
-              month={month}
-              onBudgetAction={onBudgetAction}
-              isCollapsed
-            />
-          </View>
-        ) : (
-          <>
-            <TotalsList
-              prevMonthName={prevMonthName}
-              style={{
-                padding: '5px 0',
-                marginTop: 17,
-                backgroundColor: theme.budgetHeaderCurrentMonth,
-                borderTopWidth: 1,
-                borderBottomWidth: 1,
-                borderColor: theme.tableBorder,
-              }}
-            />
-            <View style={{ margin: '23px 0' }}>
-              <ToBudget
-                prevMonthName={prevMonthName}
-                month={month}
-                onBudgetAction={onBudgetAction}
-              />
-            </View>
-          </>
-        )}
+        <MonthSummary month={month} />
       </SheetNameProvider>
     </View>
   );
-});
+}
 
 BudgetSummary.displayName = 'EnvelopeBudgetSummary';
+
+/**
+ * What a month's summary shows: the "to budget" figure and the amounts
+ * that change its meaning, last month's overspending and money held for
+ * next month.
+ */
+function useMonthSummary(month: string) {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  const format = useFormat();
+
+  const toBudget = Number(useEnvelopeSheetValue(envelopeBudget.toBudget) ?? 0);
+  const overspent = Number(
+    useEnvelopeSheetValue(envelopeBudget.lastMonthOverspent) ?? 0,
+  );
+  const held = Number(useEnvelopeSheetValue(envelopeBudget.forNextMonth) ?? 0);
+
+  const prevMonthName = monthUtils.format(
+    monthUtils.prevMonth(month),
+    'LLL',
+    locale,
+  );
+
+  // The notes about the figure, in the order they explain it: last
+  // month's overspending, which the amount already allows for, then the
+  // money held for next month, which the chip's menu sets
+  const details: SummaryDetailLineProps[] = [];
+  if (overspent !== 0) {
+    details.push({
+      label: t('Overspent in {{prevMonthName}}', { prevMonthName }),
+      amount: format(-Math.abs(overspent), 'financial'),
+      color: theme.toBudgetNegativeText,
+    });
+  }
+  if (held !== 0) {
+    details.push({
+      label: t('For next month'),
+      amount: format(held, 'financial'),
+    });
+  }
+
+  const figure = {
+    figure: format(toBudget, 'financial'),
+    figureLabel: getToBudgetLabel(toBudget, t),
+    hasChevron: true,
+  };
+  const needs = {
+    widths: getSummaryWidths(measureText, { ...figure, details }),
+    detailLines: details.length,
+  };
+  return { toBudget, prevMonthName, details, needs };
+}
+
+function MonthSummary({ month }: BudgetSummaryProps) {
+  const { onBudgetAction } = useEnvelopeBudget();
+  const { compactHeader, summaryLayout } = useContext(MonthsContext);
+  const { toBudget, prevMonthName, details } = useMonthSummary(month);
+  const { arrangement } = summaryLayout;
+  const isBeside = arrangement !== 'stacked';
+
+  return (
+    <>
+      <View
+        style={{
+          flexDirection: isBeside ? 'row' : 'column',
+          // Beside the figure, the details start level with its top
+          alignItems: 'flex-start',
+          gap: isBeside ? SUMMARY_INLINE_GAP : SUMMARY_GAP,
+        }}
+      >
+        {/* Beside the details, the figure keeps the budget's widest
+            figure's column, so the details start at one place in every
+            month */}
+        <View
+          data-summary-figure-column
+          style={{
+            flexShrink: 0,
+            maxWidth: '100%',
+            minWidth: isBeside ? summaryLayout.figureWidth : 0,
+          }}
+        >
+          <ToBudget
+            month={month}
+            amount={toBudget}
+            isWide={summaryLayout.figure === 'wide'}
+            figureSize={summaryLayout.figureSize}
+            prevMonthName={prevMonthName}
+            onBudgetAction={onBudgetAction}
+          />
+        </View>
+        <SummaryDetails lines={details} layout={summaryLayout} />
+      </View>
+      {compactHeader && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            height: SUMMARY_ACTIONS_HEIGHT,
+            marginTop: SUMMARY_GAP,
+            marginLeft: -4,
+          }}
+        >
+          <MonthHeader month={month} />
+        </View>
+      )}
+    </>
+  );
+}
+
+/**
+ * Renders nothing; tells the budget table what this month's summary would
+ * show, so one layout can suit every month in the budget.
+ */
+export function SummaryNeeds({ month }: BudgetSummaryProps) {
+  return (
+    <SheetNameProvider name={monthUtils.sheetForMonth(month)}>
+      <ReportNeeds month={month} />
+    </SheetNameProvider>
+  );
+}
+
+function ReportNeeds({ month }: BudgetSummaryProps) {
+  useReportSummaryNeeds(month, useMonthSummary(month).needs);
+  return null;
+}

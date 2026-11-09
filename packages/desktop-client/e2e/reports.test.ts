@@ -76,7 +76,7 @@ test.describe('Reports', () => {
     await reportsPage.rightClickReportCard('Net Worth');
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
   });
 
   test('loads net worth graph and checks visuals', async () => {
@@ -156,7 +156,7 @@ test.describe('Reports', () => {
           .click();
         await page
           .getByRole('menu')
-          .getByRole('button', { name: 'Account', exact: true })
+          .getByRole('menuitem', { name: 'Account', exact: true })
           .click();
         await page
           .getByRole('textbox', { name: 'Account', exact: true })
@@ -322,6 +322,128 @@ test.describe('Reports', () => {
       );
     });
 
+    test('saves a forecast starting today in both display modes', async () => {
+      await page.getByTestId('date-range-picker-trigger').click();
+      await page.getByRole('button', { name: 'Next 6 months' }).click();
+      await page.keyboard.press('Escape');
+      const startToday = page.getByRole('button', {
+        name: 'Start today',
+        exact: true,
+      });
+      await expect(startToday).toHaveAttribute('aria-pressed', 'false');
+      await startToday.click();
+      await expect(startToday).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('date-range-picker-trigger')).toContainText(
+        '01/01/2017',
+      );
+      await expect(page.getByTestId('date-range-picker-trigger')).toContainText(
+        '06/30/2017',
+      );
+      await expect(page.getByText('Ending Balance: 2017-06-30')).toBeVisible();
+      await expect(
+        page.getByText('This range moves forward from today.', {
+          exact: false,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Current month', { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole('main')).toMatchThemeScreenshots();
+
+      await reportsPage.selectForecastGranularity('Daily');
+      await expect(
+        page.getByText('Today · Jan 1', { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole('main')).toMatchThemeScreenshots();
+      await page.getByRole('button', { name: 'Save widget' }).click();
+      const reportUrl = page.url();
+      reportsPage = await navigation.goToReportsPage();
+      await page
+        .getByTestId('reports-page')
+        .locator('.react-grid-item')
+        .last()
+        .scrollIntoViewIfNeeded();
+      const card = page.getByRole('button', { name: /^Balance Forecast/ });
+      await expect(card).toContainText('From today: 2017-01-01 – 2017-06-30');
+      await expect(card).toContainText('2017-06-30');
+      const todayMarker = card.locator(
+        '.recharts-reference-line-line[stroke-dasharray="4 4"]',
+      );
+      await expect(todayMarker).toHaveAttribute('x', '2017-01-01');
+      await expect
+        .poll(() =>
+          todayMarker.evaluate(marker => marker.getBoundingClientRect().height),
+        )
+        .toBeGreaterThan(0);
+      await card.click();
+      await expect(page).toHaveURL(reportUrl);
+      await expect(startToday).toHaveAttribute('aria-pressed', 'true');
+      await expect(
+        page.getByRole('button', { name: 'Daily', exact: true }),
+      ).toBeVisible();
+
+      await page.getByTestId('date-range-picker-trigger').click();
+      await page.getByRole('button', { name: 'Next 3 months' }).click();
+      await page.keyboard.press('Escape');
+      await expect(page.getByTestId('date-range-picker-trigger')).toContainText(
+        '03/31/2017',
+      );
+      await page
+        .getByRole('button', { name: 'Compare lines', exact: true })
+        .click();
+      await page.getByRole('button', { name: 'Add line', exact: true }).click();
+      await page
+        .getByRole('button', { name: 'Hide line editor', exact: true })
+        .click();
+      await page.getByTestId('date-range-picker-trigger').click();
+      await page
+        .getByRole('button', { name: 'Next 6 months', exact: true })
+        .click();
+      await page.keyboard.press('Escape');
+      await expect(startToday).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('date-range-picker-trigger')).toContainText(
+        '06/30/2017',
+      );
+      await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+      const savedNotification = page.getByText(
+        'Dashboard widget successfully saved.',
+        { exact: true },
+      );
+      if (await savedNotification.isVisible()) {
+        await page.getByRole('button', { name: 'Close', exact: true }).click();
+      }
+      await page
+        .getByRole('button', { name: 'Save widget', exact: true })
+        .click();
+      await expect(savedNotification).toBeVisible();
+      await page.reload();
+      await expect(startToday).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('date-range-picker-trigger')).toContainText(
+        '06/30/2017',
+      );
+      await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+      await startToday.click();
+      await expect(startToday).toHaveAttribute('aria-pressed', 'false');
+      await expect(page.getByTestId('date-range-picker-trigger')).toContainText(
+        'Jan 2017',
+      );
+
+      await startToday.click();
+      await page.getByTestId('date-range-picker-trigger').click();
+      await page.getByRole('button', { name: 'Month', exact: true }).click();
+      await page
+        .getByRole('button', { name: 'February 2017', exact: true })
+        .click();
+      await page
+        .getByRole('button', { name: 'March 2017', exact: true })
+        .click();
+      await page.keyboard.press('Escape');
+      await expect(startToday).toHaveAttribute('aria-pressed', 'false');
+      await expect(page.getByTestId('date-range-picker-trigger')).toContainText(
+        'Feb 2017',
+      );
+    });
+
     test('loads tracking budget forecast report', async () => {
       const settingsPage = await navigation.goToSettingsPage();
       await settingsPage.useBudgetType('Tracking');
@@ -338,6 +460,10 @@ test.describe('Reports', () => {
       await reportsPage.waitToLoad();
       await reportsPage.goToBalanceForecastPage();
       await reportsPage.selectForecastSource('Tracking budget');
+
+      await expect(
+        page.getByRole('button', { name: 'Start today', exact: true }),
+      ).toHaveCount(0);
 
       await expect(page).toMatchThemeScreenshots();
     });
@@ -392,7 +518,7 @@ test.describe('Reports', () => {
 
       const splitRow = page.getByText('Split:', { exact: true }).locator('..');
       await splitRow.getByRole('button').click();
-      await page.getByRole('button', { name: 'Tag', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Tag', exact: true }).click();
       await customReportPage.selectViz('Data Table');
 
       await expect(page.getByText('#red', { exact: true })).toBeVisible();
@@ -433,7 +559,7 @@ test.describe('Reports', () => {
       await page.goBack();
       await page.getByTestId('reports-page').waitFor();
       await splitRow.getByRole('button').click();
-      await page.getByRole('button', { name: 'Tag', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Tag', exact: true }).click();
       await customReportPage.selectViz('Data Table');
       await page.getByRole('button', { name: 'Tag scope: All tags' }).click();
       const scopedTagPopover = page.getByTestId('tag-scope-popover');
@@ -459,7 +585,9 @@ test.describe('Reports', () => {
       await typeRow
         .getByRole('button', { name: 'Payment', exact: true })
         .click();
-      await page.getByRole('button', { name: 'Budgeted', exact: true }).click();
+      await page
+        .getByRole('menuitem', { name: 'Budgeted', exact: true })
+        .click();
       await expect(splitRow.getByRole('button')).toHaveText('Category');
     });
 
@@ -482,7 +610,9 @@ test.describe('Reports', () => {
 
       const splitRow = page.getByText('Split:', { exact: true }).locator('..');
       await splitRow.getByRole('button', { name: 'Tag', exact: true }).click();
-      await page.getByRole('button', { name: 'Category', exact: true }).click();
+      await page
+        .getByRole('menuitem', { name: 'Category', exact: true })
+        .click();
       await expect(warning).not.toBeVisible();
     });
 
@@ -533,7 +663,10 @@ test.describe('Reports', () => {
           .getByRole('button', { name: 'Options', exact: true })
           .click();
         await page
-          .getByRole('button', { name: 'Show empty rows', exact: true })
+          .getByRole('menuitemcheckbox', {
+            name: 'Show empty rows',
+            exact: true,
+          })
           .click();
         await page.keyboard.press('Escape');
 
