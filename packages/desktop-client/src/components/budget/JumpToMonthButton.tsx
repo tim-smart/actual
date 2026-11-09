@@ -15,7 +15,7 @@ import { css, cx } from '@emotion/css';
 
 import { useLanguage } from '#hooks/useLocale';
 
-import { headerControlClass } from './headerStyles';
+import { headerChevronClass, headerControlClass } from './headerStyles';
 import { formatMonthLabel } from './monthLabel';
 import type { MonthBounds } from './MonthsContext';
 
@@ -120,12 +120,8 @@ export function JumpToMonthButton({
           />
           <SvgCheveronDown
             aria-hidden
-            style={{
-              width: CHEVRON,
-              height: CHEVRON,
-              flexShrink: 0,
-              color: theme.tableHeaderText,
-            }}
+            className={headerChevronClass}
+            style={{ width: CHEVRON, height: CHEVRON }}
           />
         </Button>
       </Tooltip>
