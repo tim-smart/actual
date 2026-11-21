@@ -127,7 +127,7 @@ export class ReportsPage {
 
   async selectForecastGranularity(granularity: string) {
     await this.pageContent.getByRole('button', { name: 'Monthly' }).click();
-    const option = this.page.getByRole('button', { name: granularity });
+    const option = this.page.getByRole('menuitem', { name: granularity });
     await option.waitFor({ state: 'visible' });
     await option.click();
     await this.pageContent
@@ -137,7 +137,7 @@ export class ReportsPage {
 
   async selectYAxisBase(yAxisBase: string) {
     await this.pageContent.getByRole('button', { name: 'Auto' }).click();
-    const option = this.page.getByRole('button', { name: yAxisBase });
+    const option = this.page.getByRole('menuitem', { name: yAxisBase });
     await option.waitFor({ state: 'visible' });
     await option.click();
     await this.pageContent
@@ -153,7 +153,7 @@ export class ReportsPage {
         name: /^(Scheduled transactions|Tracking budget)$/,
       })
       .click();
-    const option = this.page.getByRole('button', { name: source });
+    const option = this.page.getByRole('menuitem', { name: source });
     await option.waitFor({ state: 'visible' });
     await option.click();
     await this.pageContent
@@ -165,14 +165,16 @@ export class ReportsPage {
     await this.pageContent
       .getByRole('button', { name: 'Add new widget' })
       .click();
-    await this.page.getByRole('button', { name: widgetName }).click();
+    await this.page.getByRole('menuitem', { name: widgetName }).click();
   }
 
   async goToCustomReportPage() {
     await this.pageContent
       .getByRole('button', { name: 'Add new widget' })
       .click();
-    await this.page.getByRole('button', { name: 'New custom report' }).click();
+    await this.page
+      .getByRole('menuitem', { name: 'New custom report' })
+      .click();
     return new CustomReportPage(this.page);
   }
 

@@ -24,10 +24,10 @@ function getDisplayedMonths(): string[] {
     .filter((month): month is string => Boolean(month));
 }
 
-// The budget summaries strip also renders the month before and after the
+// The budget summaries row also renders the month before and after the
 // displayed months (clipped by its container) so it can animate between
 // months, so a summary being in the DOM does not mean it is on screen. Only
-// target the current month while the month picker shows it as displayed, and
+// target the current month while the month headings show it as displayed, and
 // otherwise fall back to the first displayed month.
 function findBudgetSummary(): HTMLElement | null {
   const displayedMonths = getDisplayedMonths();
@@ -71,7 +71,7 @@ function getBudgetTourSteps({ navigate, budgetType }: TourStepDeps): Step[] {
           {{ appName: 'Actual' }} is a budgeting app that helps you understand
           exactly where your money goes. This short tour walks you through the
           basics. It only takes a couple of minutes, and you can leave at any
-          time and replay it later from the Help menu.
+          time and replay it later from the account menu at the top right.
         </Trans>
       ),
     },
@@ -177,9 +177,9 @@ function getBudgetTourSteps({ navigate, budgetType }: TourStepDeps): Step[] {
       title: <Trans>Month by Month</Trans>,
       content: (
         <Trans>
-          Every month gets its own budget. Use the month picker to move between
-          months, and the calendar icons on the left to choose how many months
-          are shown side by side.
+          Every month gets its own budget. Use the arrows beside the month names
+          to move between months, the year to jump to any month, and the
+          numbered buttons to choose how many months are shown side by side.
         </Trans>
       ),
     },
@@ -224,8 +224,9 @@ function getBudgetTourSteps({ navigate, budgetType }: TourStepDeps): Step[] {
       title: <Trans>Getting Help</Trans>,
       content: (
         <Trans>
-          The Help menu is always here when you need it. Use it to replay this
-          tour, browse the documentation, or ask the community on Discord.
+          Help is always here, in the account menu at the top right. Use it to
+          replay this tour, browse the documentation, or ask the community on
+          Discord.
         </Trans>
       ),
     },

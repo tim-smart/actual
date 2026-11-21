@@ -1,112 +1,96 @@
-import React, {
-  useCallback,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { animated, useSpring } from 'react-spring';
+import React, { useCallback, useContext, useState } from 'react';
+import { animated } from 'react-spring';
 
+import { theme } from '@actual-app/components/theme';
 import { View, viewStyles } from '@actual-app/components/view';
-import { addMonths, subMonths } from '@actual-app/core/shared/months';
+import { currentMonth as getCurrentMonth } from '@actual-app/core/shared/months';
 import { css } from '@emotion/css';
 
 import { useResizeObserver } from '#hooks/useResizeObserver';
 
 import { MonthsContext } from './MonthsContext';
+import { useMonthSlide } from './useMonthSlide';
 
 import { useBudgetComponents } from '.';
 
 export function BudgetSummaries() {
   const { months } = useContext(MonthsContext);
-  const [firstMonth] = months;
 
   const [widthState, setWidthState] = useState(0);
-  const [styles, spring] = useSpring(
-    () => ({
-      from: { x: 0 },
-      config: { mass: 3, tension: 600, friction: 80 },
-    }),
-    [],
-  );
-
   const containerRef = useResizeObserver<HTMLDivElement>(
     useCallback(rect => {
       setWidthState(rect.width);
     }, []),
     { measureOnAttach: true },
   );
-
-  const prevMonth0 = useRef(firstMonth);
-  const allMonths = useMemo(() => {
-    const all = [...months];
-    all.unshift(subMonths(firstMonth, 1));
-    all.push(addMonths(months[months.length - 1], 1));
-    return all;
-  }, [months, firstMonth]);
-  const monthWidth = widthState / months.length;
-
-  useLayoutEffect(() => {
-    const prevMonth = prevMonth0.current;
-    const reversed = prevMonth > firstMonth;
-    const offsetX = monthWidth;
-    let from = reversed ? -offsetX * 2 : 0;
-
-    if (prevMonth !== allMonths[0] && prevMonth !== allMonths[2]) {
-      from = -offsetX;
-    }
-
-    const to = -offsetX;
-    if (from !== to) {
-      void spring.start({ from: { x: from }, to: { x: to } });
-    }
-  }, [spring, firstMonth, monthWidth, allMonths]);
-
-  useLayoutEffect(() => {
-    prevMonth0.current = firstMonth;
-  }, [firstMonth]);
-
-  useLayoutEffect(() => {
-    void spring.start({ to: { x: -monthWidth }, immediate: true });
-  }, [spring, monthWidth]);
+  const { allMonths, monthWidth, transform, isOffscreen } = useMonthSlide(
+    months,
+    widthState,
+  );
 
   const { SummaryComponent } = useBudgetComponents();
+  const currentMonth = getCurrentMonth();
 
   return (
     <div
-      className={css([
-        { flex: 1, overflow: 'hidden' },
-        months.length === 1 && {
-          marginLeft: -4,
-          marginRight: -4,
-        },
-      ])}
+      className={css({
+        flex: 1,
+        minWidth: 0,
+        position: 'relative',
+        overflow: 'hidden',
+      })}
       ref={containerRef}
     >
+      {/* The columns themselves, their tint and the line between them,
+          laid out as the headings over them and the table's columns
+          under them are, so each line falls on the same pixel as theirs.
+          The strip of summaries slides over them when the months step,
+          with the heading row's strip: its offset is a fraction of a
+          pixel wherever the columns' width is, and a line drawn inside
+          it would be smeared across two pixels and a touch to one side
+          of the table's. */}
+      <View
+        aria-hidden
+        data-testid="budget-summary-columns"
+        style={{ position: 'absolute', inset: 0, flexDirection: 'row' }}
+      >
+        {months.map(month => (
+          <View
+            key={month}
+            data-month={month}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              borderLeft: `1px solid ${theme.tableBorder}`,
+              backgroundColor:
+                month === currentMonth
+                  ? theme.budgetCurrentMonth
+                  : theme.budgetOtherMonth,
+            }}
+          />
+        ))}
+      </View>
       <animated.div
         className={viewStyles}
         style={{
           flexDirection: 'row',
           width: widthState,
+          height: '100%',
           willChange: 'transform',
-          transform: styles.x.to(x => `translateX(${x}px)`),
+          transform,
         }}
       >
-        {allMonths.map(month => {
-          return (
-            <View
-              key={month}
-              style={{
-                flex: `0 0 ${monthWidth}px`,
-                paddingLeft: 4,
-                paddingRight: 4,
-              }}
-            >
-              <SummaryComponent month={month} />
-            </View>
-          );
-        })}
+        {allMonths.map((month, index) => (
+          // The first and last months only exist to animate in; keep their
+          // controls out of the tab order and away from screen readers.
+          <View
+            key={month}
+            inert={isOffscreen(index)}
+            style={{ flex: `0 0 ${monthWidth}px` }}
+          >
+            <SummaryComponent month={month} />
+          </View>
+        ))}
       </animated.div>
     </div>
   );

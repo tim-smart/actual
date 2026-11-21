@@ -107,7 +107,10 @@ type BudgetMonthMenuProps = Omit<
   ComponentPropsWithoutRef<typeof Menu>,
   'onMenuSelect' | 'items'
 > &
-  BudgetMonthMenuActions;
+  BudgetMonthMenuActions & {
+    /** Offer to add a note, for a month that has none yet. */
+    onAddNote?: () => void;
+  };
 
 export function BudgetMonthMenu({
   onCopyLastMonthBudget,
@@ -117,8 +120,10 @@ export function BudgetMonthMenu({
   onApplyBudgetTemplates,
   onOverwriteWithBudgetTemplates,
   onEndOfMonthCleanup,
+  onAddNote,
   ...props
 }: BudgetMonthMenuProps) {
+  const { t } = useTranslation();
   const { items, onMenuSelect } = useBudgetMonthMenu({
     onCopyLastMonthBudget,
     onSetBudgetsToZero,
@@ -129,5 +134,17 @@ export function BudgetMonthMenu({
     onEndOfMonthCleanup,
   });
 
-  return <Menu {...props} onMenuSelect={onMenuSelect} items={items} />;
+  return (
+    <Menu
+      {...props}
+      onMenuSelect={name =>
+        name === 'add-note' ? onAddNote?.() : onMenuSelect(name)
+      }
+      items={
+        onAddNote
+          ? [{ name: 'add-note', text: t('Add note') }, Menu.line, ...items]
+          : items
+      }
+    />
+  );
 }

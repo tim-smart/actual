@@ -130,6 +130,110 @@ export const colors = {
   toBudgetPositive: { all: { ref: 'numberPositive' } },
   toBudgetZero: { all: { ref: 'numberPositive' } },
   toBudgetNegative: { all: { ref: 'budgetNumberNegative' } },
+  toBudgetPositiveBackground: {
+    light: 'green100',
+    dark: {
+      raw: 'color-mix(in srgb, var(--palette-green500) 14%, var(--palette-navy800))',
+    },
+    midnight: {
+      raw: 'color-mix(in srgb, var(--palette-green500) 14%, var(--palette-gray800))',
+    },
+  },
+  toBudgetPositiveBorder: {
+    light: 'green150',
+    dark: {
+      raw: 'color-mix(in srgb, var(--palette-green500) 40%, var(--palette-navy800))',
+    },
+    midnight: {
+      raw: 'color-mix(in srgb, var(--palette-green500) 40%, var(--palette-gray800))',
+    },
+  },
+  toBudgetZeroBackground: { all: { ref: 'tableBackground' } },
+  toBudgetZeroBorder: {
+    light: 'navy200',
+    dark: 'navy600',
+    midnight: 'gray500',
+  },
+  budgetProjectedBackground: {
+    light: 'navy50',
+    // Lighter than the month behind it, but dark enough for the warning red
+    // on it to keep AA contrast
+    dark: {
+      raw: 'color-mix(in srgb, var(--palette-navy700) 60%, var(--palette-navy800))',
+    },
+    midnight: 'gray600',
+  },
+  toBudgetNegativeBackground: {
+    light: 'red50',
+    dark: {
+      raw: 'color-mix(in srgb, var(--palette-red500) 16%, var(--palette-navy800))',
+    },
+    midnight: {
+      raw: 'color-mix(in srgb, var(--palette-red500) 16%, var(--palette-gray800))',
+    },
+  },
+  toBudgetNegativeBorder: {
+    light: 'red150',
+    dark: {
+      raw: 'color-mix(in srgb, var(--palette-red500) 45%, var(--palette-navy800))',
+    },
+    midnight: {
+      raw: 'color-mix(in srgb, var(--palette-red500) 45%, var(--palette-gray800))',
+    },
+  },
+  toBudgetNegativeText: { light: 'red700', dark: 'red200', midnight: 'red200' },
+  budgetSummaryShadow: {
+    light: { raw: 'rgba(16, 42, 67, 0.08)' },
+    dark: { raw: 'rgba(0, 0, 0, 0.35)' },
+    midnight: { raw: 'rgba(0, 0, 0, 0.5)' },
+  },
+  budgetFocusRing: {
+    light: 'purple500',
+    dark: 'purple200',
+    midnight: 'purple200',
+  },
+  // The current month's underline and dot: 3:1 on the month behind them
+  budgetCurrentMonthMarker: {
+    light: { ref: 'buttonPrimaryBackground' },
+    dark: 'purple200',
+    midnight: { ref: 'buttonPrimaryBackground' },
+  },
+  budgetControlTrack: {
+    light: 'navy100',
+    dark: 'navy900',
+    midnight: 'gray900',
+  },
+  // A plan at risk: spending already past it while the month is under way.
+  // Amber, the warning colour, never the red of a settled result
+  budgetAtRiskBackground: {
+    light: 'orange100',
+    dark: {
+      raw: 'color-mix(in srgb, var(--palette-orange500) 12%, var(--palette-navy800))',
+    },
+    midnight: {
+      raw: 'color-mix(in srgb, var(--palette-orange500) 12%, var(--palette-gray800))',
+    },
+  },
+  budgetAtRiskBorder: {
+    light: 'orange700',
+    dark: 'orange500',
+    midnight: 'orange500',
+  },
+  budgetAtRiskText: {
+    light: 'orange800',
+    dark: 'orange400',
+    midnight: 'orange400',
+  },
+  budgetControlSelected: {
+    light: 'white',
+    dark: 'navy600',
+    midnight: 'gray600',
+  },
+  budgetControlSelectedRing: {
+    light: 'navy500',
+    dark: 'navy500',
+    midnight: 'gray400',
+  },
 
   sidebarBackground: { light: 'navy900', dark: 'navy900', midnight: 'gray900' },
   sidebarItemBackgroundPending: { all: 'orange200' },
@@ -217,7 +321,8 @@ export const colors = {
   menuBackground: { light: 'white', dark: 'navy800', midnight: 'gray700' },
   menuItemBackgroundHover: {
     light: 'navy100',
-    dark: 'navy500',
+    // navy500 left the hovered item's text at 4.1:1
+    dark: 'navy600',
     midnight: 'gray500',
   },
   menuItemText: { light: 'navy900', dark: 'navy100', midnight: 'gray100' },
@@ -225,6 +330,11 @@ export const colors = {
     light: { ref: 'menuItemText' },
     dark: 'navy50',
     midnight: 'gray50',
+  },
+  menuItemFocusRing: {
+    light: { ref: 'formInputBorderSelected' },
+    dark: { ref: 'menuItemTextHover' },
+    midnight: { ref: 'menuItemTextHover' },
   },
   menuItemTextSelected: {
     light: 'purple300',
@@ -238,7 +348,7 @@ export const colors = {
   },
   menuBorder: { light: 'navy100', dark: 'navy900', midnight: 'gray800' },
   menuKeybindingText: {
-    light: 'navy400',
+    light: 'navy600',
     dark: 'purple200',
     midnight: 'purple200',
   },
@@ -349,7 +459,12 @@ export const colors = {
   },
   buttonMenuSelectedBorder: { all: { ref: 'buttonMenuSelectedBackground' } },
 
-  buttonPrimaryText: { all: 'white' },
+  buttonPrimaryText: {
+    light: 'white',
+    dark: 'white',
+    // White on the light purple fill is only 3.5:1
+    midnight: 'gray900',
+  },
   buttonPrimaryTextHover: { all: { ref: 'buttonPrimaryText' } },
   buttonPrimaryBackground: {
     light: 'purple500',
@@ -357,9 +472,11 @@ export const colors = {
     midnight: 'purple300',
   },
   buttonPrimaryBackgroundHover: {
-    light: 'purple300',
+    // Darker on hover: white on the lighter purple300 is only 3.5:1
+    light: 'purple600',
     dark: 'purple600',
-    midnight: { ref: 'buttonPrimaryBackground' },
+    // Lighter on hover, so hover shows; the dark text only gains contrast
+    midnight: 'purple200',
   },
   buttonPrimaryBorder: { all: { ref: 'buttonPrimaryBackground' } },
   buttonPrimaryShadow: {
@@ -451,6 +568,11 @@ export const colors = {
     dark: 'purple600',
     midnight: 'purple600',
   },
+  datePickerSelectedText: { all: { ref: 'buttonPrimaryText' } },
+  datePickerSelectedBackgroundHover: {
+    all: { ref: 'buttonPrimaryBackgroundHover' },
+  },
+  notificationBadgeText: { all: { ref: 'buttonPrimaryText' } },
 
   buttonBareText: { all: { ref: 'pageText' } },
   buttonBareTextHover: { all: { ref: 'pageText' } },

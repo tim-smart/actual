@@ -1,7 +1,9 @@
 // @ts-strict-ignore
 import React, {
+  createContext,
   forwardRef,
   useCallback,
+  useContext,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
@@ -60,6 +62,12 @@ import {
 
 export const ROW_HEIGHT = 32;
 
+/**
+ * The space either side of a cell's content. A table whose columns get
+ * tight can lower it, so its amounts keep their full width.
+ */
+export const CellPaddingContext = createContext(5);
+
 function fireBlur(onBlur, e) {
   if (document.hasFocus()) {
     // We only fire the blur event if the app is still focused
@@ -82,6 +90,7 @@ export const Field = forwardRef<HTMLDivElement, FieldProps>(function Field(
   { width, name, truncate = true, children, style, contentStyle, ...props },
   ref,
 ) {
+  const cellPadding = useContext(CellPaddingContext);
   return (
     <View
       innerRef={ref}
@@ -102,7 +111,7 @@ export const Field = forwardRef<HTMLDivElement, FieldProps>(function Field(
       <View
         style={{
           flex: 1,
-          padding: '0 5px',
+          padding: `0 ${cellPadding}px`,
           justifyContent: 'center',
           ...contentStyle,
         }}
@@ -184,6 +193,7 @@ export function Cell({
 }: CellProps) {
   const mouseCoords = useRef(null);
   const viewRef = useRef(null);
+  const cellPadding = useContext(CellPaddingContext);
 
   useProperFocus(viewRef, focused !== undefined ? focused : exposed);
 
@@ -219,7 +229,7 @@ export function Cell({
             style={{
               flexDirection: 'row',
               flex: 1,
-              padding: '0 5px',
+              padding: `0 ${cellPadding}px`,
               alignItems: 'center',
               ...styles.smallText,
               ...valueStyle,
@@ -258,6 +268,7 @@ export function Cell({
       exposed,
       children,
       plain,
+      cellPadding,
       valueStyle,
       onExpose,
       name,

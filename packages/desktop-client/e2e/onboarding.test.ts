@@ -122,7 +122,7 @@ test.describe('Onboarding', () => {
     await expect(budgetPage.budgetTable).toBeVisible();
 
     await navigation.clickOnNoServer();
-    await page.getByRole('button', { name: 'Start using a server' }).click();
+    await page.getByRole('menuitem', { name: 'Start using a server' }).click();
 
     await expect(configurationPage.heading).toHaveText('Connect to a server');
   });

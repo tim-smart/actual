@@ -57,6 +57,11 @@ export function removeCategoriesFromGroups(
     .filter(group => group.categories?.length);
 }
 
+/** Width of the frozen category column for its expanded state (0, 1 or 2). */
+export function getCategoryColumnWidth(expandedState: number | undefined) {
+  return 200 + 100 * (expandedState ?? 0);
+}
+
 export function separateGroups(categoryGroups: CategoryGroupEntity[]) {
   return [
     categoryGroups.filter(g => !g.is_income),

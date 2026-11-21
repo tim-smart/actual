@@ -20,7 +20,7 @@ test.describe('Tour', () => {
   });
 
   async function startTourFromHelpMenu() {
-    await page.getByRole('button', { name: 'Help' }).click();
+    await page.getByRole('button', { name: /account and app menu/i }).click();
     await page.getByText('Take a tour').click();
     return page.getByTestId('tour-tooltip');
   }

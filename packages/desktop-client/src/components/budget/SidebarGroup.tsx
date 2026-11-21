@@ -21,7 +21,8 @@ import { NotesButton } from '#components/NotesButton';
 import { InputCell } from '#components/table';
 import { useContextMenu } from '#hooks/useContextMenu';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
-import { useGlobalPref } from '#hooks/useGlobalPref';
+
+import { useCategoryColumnWidth } from './CategoryColumnWidth';
 
 type SidebarGroupProps = {
   group: CategoryGroupEntity;
@@ -63,8 +64,7 @@ export function SidebarGroup({
 }: SidebarGroupProps) {
   const { t } = useTranslation();
   const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
-  const [categoryExpandedStatePref] = useGlobalPref('categoryExpandedState');
-  const categoryExpandedState = categoryExpandedStatePref ?? 0;
+  const categoryWidth = useCategoryColumnWidth();
 
   const temporary = group.id === 'new';
   const canSortCategories =
@@ -200,7 +200,7 @@ export function SidebarGroup({
       innerRef={innerRef}
       style={{
         ...style,
-        width: 200 + 100 * categoryExpandedState,
+        width: categoryWidth,
         backgroundColor: theme.budgetHeaderCurrentMonth,
         overflow: 'hidden',
         '& .hover-visible': {

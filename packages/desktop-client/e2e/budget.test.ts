@@ -29,13 +29,20 @@ test.describe('Budget', () => {
   test('renders the summary information: available funds, overspent, budgeted and for next month', async () => {
     const summary = budgetPage.budgetSummary.first();
 
-    await expect(summary.getByText('Available funds')).toBeVisible({
+    await expect(summary.getByText(/^Overspent in /)).toBeVisible({
       timeout: 10000,
     });
-    await expect(summary.getByText(/^Overspent in /)).toBeVisible();
-    await expect(summary.getByText('Budgeted')).toBeVisible();
     await expect(summary.getByText('For next month')).toBeVisible();
     await expect(page).toMatchThemeScreenshots();
+
+    await budgetPage.openToBudgetMenu();
+    const breakdown = page.locator('[data-popover]');
+    await expect(breakdown.getByText('Available funds')).toBeVisible();
+    await expect(breakdown.getByText(/^Overspent in /)).toBeVisible();
+    await expect(breakdown.getByText('Budgeted')).toBeVisible();
+    await expect(breakdown.getByText('For next month')).toBeVisible();
+    await expect(page).toMatchThemeScreenshots();
+    await page.keyboard.press('Escape');
   });
 
   test('transfer funds to another category', async () => {
@@ -70,14 +77,14 @@ test.describe('Budget', () => {
     await budgetPage.rightClickCategory(1);
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
   });
 
   test('right clicking a category group opens context menu', async () => {
     await budgetPage.rightClickCategoryGroup('Usual Expenses');
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
   });
 
   test('right clicking budget name opens context menu', async () => {
@@ -85,7 +92,7 @@ test.describe('Budget', () => {
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
     await expect(
-      menu.getByRole('button', { name: 'Switch file' }),
+      menu.getByRole('menuitem', { name: 'Switch file' }),
     ).toBeVisible();
   });
 });

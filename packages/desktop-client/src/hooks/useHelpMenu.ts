@@ -1,20 +1,12 @@
-import { forwardRef, useRef } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { Button } from '@actual-app/components/button';
-import { SvgHelp } from '@actual-app/components/icons/v2';
-import { Menu } from '@actual-app/components/menu';
-import { Popover } from '@actual-app/components/popover';
-import { SpaceBetween } from '@actual-app/components/space-between';
-import { useToggle } from 'usehooks-ts';
+import type { MenuItemObject } from '@actual-app/components/menu';
 
+import { useTour } from '#components/tour/TourProvider';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { pushModal } from '#modals/modalsSlice';
 import { useDispatch } from '#redux';
-
-import { useTour } from './tour/TourProvider';
 
 const getPageDocs = (page: string) => {
   switch (page) {
@@ -55,52 +47,22 @@ function openDocsForCurrentPage() {
   window.Actual.openURLInBrowser(getPageDocs(window.location.pathname));
 }
 
-type HelpMenuItem =
+export type HelpMenuItem =
   | 'docs'
   | 'discord'
   | 'keyboard-shortcuts'
   | 'start-tour'
   | 'goal-templates';
 
-type HelpButtonProps = {
-  onPress?: () => void;
-};
-
-const HelpButton = forwardRef<HTMLButtonElement, HelpButtonProps>(
-  ({ onPress }, ref) => {
-    const size = 15;
-    return (
-      <Button
-        variant="bare"
-        ref={ref}
-        onPress={onPress}
-        data-testid="help-menu-button"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-        }}
-      >
-        <SvgHelp width={size} height={size} />
-        <Trans>Help</Trans>
-      </Button>
-    );
-  },
-);
-
-HelpButton.displayName = 'HelpButton';
-
-export const HelpMenu = () => {
+/** The help actions shown in the account menu, and how to run them. */
+export function useHelpMenu() {
   const showGoalTemplates = useFeatureFlag('goalTemplatesEnabled');
   const { t } = useTranslation();
-  const [isMenuOpen, toggleMenuOpen, setMenuOpen] = useToggle();
-  const menuButtonRef = useRef(null);
-
   const dispatch = useDispatch();
   const page = useLocation().pathname;
   const { startTour } = useTour();
 
-  const handleItemSelect = (item: HelpMenuItem) => {
+  const onMenuSelect = (item: HelpMenuItem) => {
     switch (item) {
       case 'docs':
         openDocsForCurrentPage();
@@ -122,41 +84,15 @@ export const HelpMenu = () => {
     }
   };
 
-  useHotkeys('?', () => setMenuOpen(true), { useKey: true });
+  const items: MenuItemObject<HelpMenuItem>[] = [
+    { name: 'docs', text: t('Documentation') },
+    { name: 'discord', text: t('Community support (Discord)') },
+    { name: 'keyboard-shortcuts', text: t('Keyboard shortcuts'), key: '?' },
+    { name: 'start-tour', text: t('Take a tour') },
+    ...(showGoalTemplates && page === '/budget'
+      ? [{ name: 'goal-templates' as const, text: t('Goal templates') }]
+      : []),
+  ];
 
-  return (
-    <SpaceBetween>
-      <HelpButton ref={menuButtonRef} onPress={toggleMenuOpen} />
-
-      <Popover
-        placement="bottom end"
-        offset={8}
-        triggerRef={menuButtonRef}
-        isOpen={isMenuOpen}
-        onOpenChange={() => setMenuOpen(false)}
-      >
-        <Menu
-          onMenuSelect={(item: HelpMenuItem) => {
-            setMenuOpen(false);
-            handleItemSelect(item);
-          }}
-          items={[
-            {
-              name: 'docs',
-              text: t('Documentation'),
-            },
-            {
-              name: 'discord',
-              text: t('Community support (Discord)'),
-            },
-            { name: 'keyboard-shortcuts', text: t('Keyboard shortcuts') },
-            { name: 'start-tour', text: t('Take a tour') },
-            ...(showGoalTemplates && page === '/budget'
-              ? [{ name: 'goal-templates', text: t('Goal templates') }]
-              : []),
-          ]}
-        />
-      </Popover>
-    </SpaceBetween>
-  );
-};
+  return { items, onMenuSelect };
+}
