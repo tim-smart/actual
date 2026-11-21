@@ -320,21 +320,18 @@ export function ToBudget({
               }}
               month={month}
               onBudgetAction={onBudgetAction}
+              footer={
+                <TotalsList
+                  prevMonthName={prevMonthName}
+                  showResult
+                  style={{
+                    justifyContent: 'flex-start',
+                    padding: '6px 10px 8px',
+                    borderTop: `1px solid ${theme.menuBorder}`,
+                  }}
+                />
+              }
             />
-          )}
-          {menuStep === 'actions' && (
-            <View
-              style={{
-                padding: '6px 10px 8px',
-                borderTop: `1px solid ${theme.menuBorder}`,
-              }}
-            >
-              <TotalsList
-                prevMonthName={prevMonthName}
-                showResult
-                style={{ justifyContent: 'flex-start' }}
-              />
-            </View>
           )}
           {menuStep === 'buffer' && (
             <HoldMenu
