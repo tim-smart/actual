@@ -310,20 +310,6 @@ export function ToBudget({
       >
         <span tabIndex={-1} ref={ref}>
           {menuStep === 'actions' && (
-            <View
-              style={{
-                padding: '8px 10px 6px',
-                borderBottom: `1px solid ${theme.menuBorder}`,
-              }}
-            >
-              <TotalsList
-                prevMonthName={prevMonthName}
-                showResult
-                style={{ justifyContent: 'flex-start' }}
-              />
-            </View>
-          )}
-          {menuStep === 'actions' && (
             <ToBudgetMenu
               onTransfer={() => setMenuStep('transfer')}
               onCover={() => setMenuStep('cover')}
@@ -335,6 +321,20 @@ export function ToBudget({
               month={month}
               onBudgetAction={onBudgetAction}
             />
+          )}
+          {menuStep === 'actions' && (
+            <View
+              style={{
+                padding: '6px 10px 8px',
+                borderTop: `1px solid ${theme.menuBorder}`,
+              }}
+            >
+              <TotalsList
+                prevMonthName={prevMonthName}
+                showResult
+                style={{ justifyContent: 'flex-start' }}
+              />
+            </View>
           )}
           {menuStep === 'buffer' && (
             <HoldMenu
